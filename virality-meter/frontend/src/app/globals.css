@@ -1,0 +1,296 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --terminal-green: #00ff41;
+  --terminal-green-dim: #00aa2a;
+  --terminal-amber: #ffb000;
+  --terminal-red: #ff3333;
+  --terminal-cyan: #00d4ff;
+  --terminal-bg: #0a0a0a;
+  --terminal-bg-light: #111111;
+  --terminal-border: #1a1a1a;
+}
+
+body {
+  color: #e0e0e0;
+  background: var(--terminal-bg);
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+}
+
+/* Custom scrollbar - Terminal style */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--terminal-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--terminal-green-dim);
+}
+
+/* Terminal card */
+.terminal-card {
+  background: var(--terminal-bg-light);
+  border: 1px solid var(--terminal-border);
+  border-radius: 4px;
+}
+
+.terminal-card-header {
+  background: #1a1a1a;
+  border-bottom: 1px solid var(--terminal-border);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.terminal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.terminal-dot-red { background: #ff5f56; }
+.terminal-dot-yellow { background: #ffbd2e; }
+.terminal-dot-green { background: #27ca40; }
+
+/* Terminal text effects */
+.terminal-text {
+  color: var(--terminal-green);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.terminal-text-amber {
+  color: var(--terminal-amber);
+}
+
+.terminal-text-red {
+  color: var(--terminal-red);
+}
+
+.terminal-text-cyan {
+  color: var(--terminal-cyan);
+}
+
+.terminal-text-dim {
+  color: #666;
+}
+
+/* Cursor blink */
+.cursor-blink::after {
+  content: '█';
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Scanline effect - subtle */
+.scanlines::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* Terminal glow */
+.glow-green {
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+}
+
+.glow-amber {
+  box-shadow: 0 0 10px rgba(255, 176, 0, 0.2);
+}
+
+.text-glow-green {
+  text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+}
+
+.text-glow-amber {
+  text-shadow: 0 0 10px rgba(255, 176, 0, 0.5);
+}
+
+/* Progress bar terminal style */
+.terminal-progress {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  height: 8px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.terminal-progress-bar {
+  height: 100%;
+  background: var(--terminal-green);
+  transition: width 0.5s ease-out;
+}
+
+/* Terminal input */
+.terminal-input {
+  background: #0a0a0a;
+  border: 1px solid #333;
+  color: var(--terminal-green);
+  font-family: 'JetBrains Mono', monospace;
+  padding: 12px;
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.terminal-input:focus {
+  border-color: var(--terminal-green);
+}
+
+.terminal-input::placeholder {
+  color: #444;
+}
+
+/* Terminal button */
+.terminal-btn {
+  background: transparent;
+  border: 1px solid var(--terminal-green);
+  color: var(--terminal-green);
+  font-family: 'JetBrains Mono', monospace;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+}
+
+.terminal-btn:hover {
+  background: var(--terminal-green);
+  color: #000;
+}
+
+.terminal-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.terminal-btn-primary {
+  background: var(--terminal-green);
+  color: #000;
+}
+
+.terminal-btn-primary:hover {
+  background: #00cc33;
+}
+
+/* Code block style */
+.code-block {
+  background: #0a0a0a;
+  border: 1px solid #222;
+  border-radius: 4px;
+  padding: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  overflow-x: auto;
+}
+
+/* Stat display */
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--terminal-green);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.stat-label {
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Badge */
+.terminal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgba(0, 255, 65, 0.1);
+  border: 1px solid rgba(0, 255, 65, 0.3);
+  border-radius: 2px;
+  font-size: 10px;
+  color: var(--terminal-green);
+  text-transform: uppercase;
+}
+
+.terminal-badge-amber {
+  background: rgba(255, 176, 0, 0.1);
+  border-color: rgba(255, 176, 0, 0.3);
+  color: var(--terminal-amber);
+}
+
+.terminal-badge-red {
+  background: rgba(255, 51, 51, 0.1);
+  border-color: rgba(255, 51, 51, 0.3);
+  color: var(--terminal-red);
+}
+
+/* Grid pattern background */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Typing animation */
+.typing {
+  overflow: hidden;
+  white-space: nowrap;
+  animation: typing 2s steps(40, end);
+}
+
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+/* Hide scrollbar but allow scroll */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Tier colors - more subdued */
+.tier-1 { --tier-color: #666; }
+.tier-2 { --tier-color: #777; }
+.tier-3 { --tier-color: #888; }
+.tier-4 { --tier-color: #00aa2a; }
+.tier-5 { --tier-color: #00cc33; }
+.tier-6 { --tier-color: #00ff41; }
+.tier-7 { --tier-color: #ffb000; }
+.tier-8 { --tier-color: #ff8800; }
+.tier-9 { --tier-color: #ff5500; }
+.tier-10 { --tier-color: #00d4ff; }
