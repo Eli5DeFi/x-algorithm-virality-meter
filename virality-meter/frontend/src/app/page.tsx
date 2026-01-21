@@ -7,7 +7,7 @@ import ImprovementTips from '@/components/ImprovementTips';
 import XAlgorithmParams from '@/components/XAlgorithmParams';
 import DiversityScore from '@/components/DiversityScore';
 import Tooltip from '@/components/Tooltip';
-import { analyzeContent, ContentAnalysisResponse } from '@/lib/api';
+import { analyzeCombined, CombinedAnalysisResponse } from '@/lib/api';
 import { VIRALITY_TIERS } from '@/lib/tiers';
 import { getTierForScore, getTierColor } from '@/lib/tiers';
 
@@ -36,7 +36,7 @@ const TOOLTIPS = {
 };
 
 export default function Home() {
-  const [result, setResult] = useState<ContentAnalysisResponse | null>(null);
+  const [result, setResult] = useState<CombinedAnalysisResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'breakdown' | 'tips' | 'diversity' | 'params'>('breakdown');
@@ -76,7 +76,22 @@ export default function Home() {
     setError(null);
 
     try {
-      const response = await analyzeContent(content, hasMedia, mediaType, videoDuration);
+      const response = await analyzeCombined({
+        content,
+        hasMedia,
+        mediaType,
+        videoDuration,
+        contentType,
+        followersCount,
+        followingCount,
+        avgLikes,
+        avgReplies,
+        avgRetweets,
+        postsPerWeek,
+        accountAgeDays,
+        isVerified,
+        niche,
+      });
       setResult(response);
     } catch (err) {
       setError('Connection failed. Please check the backend connection.');
@@ -511,22 +526,22 @@ export default function Home() {
                   {activeTab === 'breakdown' && (
                     <motion.div key="breakdown" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                       <ScoreBreakdown
-                        signalScores={result.signal_scores}
-                        engagementPotential={result.engagement_potential}
-                        shareability={result.shareability}
-                        controversyRisk={result.controversy_risk}
-                        negativeRisk={result.negative_signal_risk}
+                        signalScores={result.post_score.signal_scores}
+                        engagementPotential={result.post_score.engagement_potential}
+                        shareability={result.post_score.shareability}
+                        controversyRisk={result.post_score.controversy_risk}
+                        negativeRisk={result.post_score.negative_signal_risk}
                       />
                     </motion.div>
                   )}
                   {activeTab === 'tips' && (
                     <motion.div key="tips" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      <ImprovementTips tips={result.improvements} />
+                      <ImprovementTips tips={result.post_score.improvements} />
                     </motion.div>
                   )}
-                  {activeTab === 'diversity' && result.diversity && (
+                  {activeTab === 'diversity' && result.post_score.diversity && (
                     <motion.div key="diversity" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      <DiversityScore diversity={result.diversity} />
+                      <DiversityScore diversity={result.post_score.diversity} />
                     </motion.div>
                   )}
                   {activeTab === 'params' && (
@@ -556,42 +571,43 @@ export default function Home() {
                     <span className="text-xs text-term-gray ml-2">virality_score.exe</span>
                   </div>
                   <div className="p-4">
+                    {/* Aggregate Score Display */}
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <motion.span
                           className="text-3xl"
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          style={{ color: getTierColor(result.tier_color) }}
+                          style={{ color: getTierColor(result.aggregate_tier_color) }}
                         >
-                          {result.tier_emoji}
+                          {result.aggregate_tier_emoji}
                         </motion.span>
                         <div>
                           <motion.div
                             className="text-4xl font-mono font-bold"
-                            style={{ color: getTierColor(result.tier_color) }}
+                            style={{ color: getTierColor(result.aggregate_tier_color) }}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                           >
-                            {result.score}
+                            {result.aggregate_score}
                             <span className="text-lg text-term-gray">/100</span>
                           </motion.div>
-                          <div className="text-[10px] text-term-gray uppercase">virality_index</div>
+                          <div className="text-[10px] text-term-gray uppercase">aggregate_score</div>
                         </div>
                       </div>
                       <div className="text-right">
                         <div
                           className="terminal-badge"
                           style={{
-                            background: `${getTierColor(result.tier_color)}15`,
-                            borderColor: `${getTierColor(result.tier_color)}40`,
-                            color: getTierColor(result.tier_color),
+                            background: `${getTierColor(result.aggregate_tier_color)}15`,
+                            borderColor: `${getTierColor(result.aggregate_tier_color)}40`,
+                            color: getTierColor(result.aggregate_tier_color),
                           }}
                         >
-                          TIER_{result.tier_level}
+                          TIER_{result.aggregate_tier_level}
                         </div>
-                        <div className="text-sm font-mono mt-1" style={{ color: getTierColor(result.tier_color) }}>
-                          {result.tier_name}
+                        <div className="text-sm font-mono mt-1" style={{ color: getTierColor(result.aggregate_tier_color) }}>
+                          {result.aggregate_tier_name}
                         </div>
                       </div>
                     </div>
@@ -600,16 +616,49 @@ export default function Home() {
                     <div className="terminal-progress mb-3">
                       <motion.div
                         className="terminal-progress-bar"
-                        style={{ backgroundColor: getTierColor(result.tier_color) }}
+                        style={{ backgroundColor: getTierColor(result.aggregate_tier_color) }}
                         initial={{ width: 0 }}
-                        animate={{ width: `${result.score}%` }}
+                        animate={{ width: `${result.aggregate_score}%` }}
                         transition={{ duration: 1, ease: 'easeOut' }}
                       />
                     </div>
 
-                    <p className="text-xs text-term-gray font-mono">
-                      &gt; {result.tier_description}
+                    <p className="text-xs text-term-gray font-mono mb-4">
+                      &gt; {result.aggregate_tier_description}
                     </p>
+
+                    {/* Account + Content Score Breakdown */}
+                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-term-border">
+                      <div className="bg-term-bg p-2.5 rounded border border-term-border">
+                        <div className="text-[10px] text-term-gray uppercase mb-1">content_score</div>
+                        <div className="text-xl font-mono font-bold text-term-cyan">
+                          {result.post_score.score}
+                          <span className="text-xs text-term-gray">/100</span>
+                        </div>
+                        <div className="text-[10px] text-term-cyan mt-1">
+                          {result.post_score.tier_emoji} {result.post_score.tier_name}
+                        </div>
+                      </div>
+                      <div className="bg-term-bg p-2.5 rounded border border-term-border">
+                        <div className="text-[10px] text-term-gray uppercase mb-1">account_score</div>
+                        <div className="text-xl font-mono font-bold text-term-amber">
+                          {result.account_score.overall_score}
+                          <span className="text-xs text-term-gray">/100</span>
+                        </div>
+                        <div className="text-[10px] text-term-amber mt-1">
+                          {result.account_score.account_tier_emoji} {result.account_score.account_tier_name}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Niche insight */}
+                    <div className="mt-3 p-2 bg-term-bg border border-term-green/20 rounded">
+                      <div className="text-[10px] text-term-green font-mono">
+                        <span className="text-term-gray">niche:</span> {niche.toUpperCase()} |
+                        <span className="text-term-gray"> reach_multiplier:</span> {result.account_score.projected_reach_multiplier}x |
+                        <span className="text-term-gray"> viral_probability:</span> {Math.round(result.account_score.viral_post_probability * 100)}%
+                      </div>
+                    </div>
                   </div>
                 </>
               ) : (
@@ -647,24 +696,24 @@ export default function Home() {
                 </div>
                 <div className="p-3">
                   <div className="grid grid-cols-4 gap-2 text-center mb-3">
-                    <StatCell label="chars" value={result.content_stats.char_count} tooltip="Character count" />
-                    <StatCell label="words" value={result.content_stats.word_count} tooltip="Word count" />
-                    <StatCell label="tags" value={result.content_stats.hashtag_count} tooltip="Hashtag count (1-2 optimal)" />
-                    <StatCell label="hooks" value={result.content_stats.viral_hooks} tooltip="Viral hook patterns detected" />
+                    <StatCell label="chars" value={result.post_score.content_stats.char_count} tooltip="Character count" />
+                    <StatCell label="words" value={result.post_score.content_stats.word_count} tooltip="Word count" />
+                    <StatCell label="tags" value={result.post_score.content_stats.hashtag_count} tooltip="Hashtag count (1-2 optimal)" />
+                    <StatCell label="hooks" value={result.post_score.content_stats.viral_hooks} tooltip="Viral hook patterns detected" />
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {result.content_stats.has_question && (
+                    {result.post_score.content_stats.has_question && (
                       <span className="text-[10px] bg-term-bg border border-term-green-dim text-term-green px-2 py-0.5 font-mono">
                         ?_QUESTION
                       </span>
                     )}
-                    {result.content_stats.has_cta && (
+                    {result.post_score.content_stats.has_cta && (
                       <span className="text-[10px] bg-term-bg border border-term-cyan text-term-cyan px-2 py-0.5 font-mono">
                         !_CTA
                       </span>
                     )}
                     <span className="text-[10px] bg-term-bg border border-term-border text-term-gray px-2 py-0.5 font-mono">
-                      {result.content_stats.emotional_tone.toUpperCase()}
+                      {result.post_score.content_stats.emotional_tone.toUpperCase()}
                     </span>
                   </div>
                 </div>
@@ -675,14 +724,14 @@ export default function Home() {
             {result && (
               <div className="hidden lg:block space-y-4">
                 <ScoreBreakdown
-                  signalScores={result.signal_scores}
-                  engagementPotential={result.engagement_potential}
-                  shareability={result.shareability}
-                  controversyRisk={result.controversy_risk}
-                  negativeRisk={result.negative_signal_risk}
+                  signalScores={result.post_score.signal_scores}
+                  engagementPotential={result.post_score.engagement_potential}
+                  shareability={result.post_score.shareability}
+                  controversyRisk={result.post_score.controversy_risk}
+                  negativeRisk={result.post_score.negative_signal_risk}
                 />
-                {result.diversity && <DiversityScore diversity={result.diversity} />}
-                <ImprovementTips tips={result.improvements} />
+                {result.post_score.diversity && <DiversityScore diversity={result.post_score.diversity} />}
+                <ImprovementTips tips={result.post_score.improvements} />
                 <XAlgorithmParams />
               </div>
             )}
@@ -699,14 +748,14 @@ export default function Home() {
         {/* Footer */}
         <footer className="mt-12 pt-6 border-t border-term-border text-center">
           <p className="text-term-gray text-xs font-mono">
-            Based on{' '}
+            Built by{' '}
             <a
-              href="https://github.com/AbdelStark/x-algorithm"
+              href="https://x.com/Eli5defi"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-term-green hover:underline"
+              className="text-term-cyan hover:underline"
             >
-              AbdelStark/x-algorithm
+              @Eli5defi
             </a>
           </p>
         </footer>
