@@ -1,0 +1,6 @@
+{
+    "installCommand": "cd virality-meter/frontend && npm install",
+    "buildCommand": "cd virality-meter/frontend && npm run build",
+    "outputDirectory": "virality-meter/frontend/.next",
+    "framework": "nextjs"
+}
