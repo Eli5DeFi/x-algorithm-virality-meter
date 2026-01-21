@@ -129,6 +129,7 @@ class ContentFeatures:
     viral_hook_count: int
     line_count: int
     caps_ratio: float
+    diversity_score: float
     content: str
 
 
@@ -179,6 +180,33 @@ class ViralityScorer:
         # Viral hooks
         viral_hook_count = sum(1 for p in VIRAL_HOOKS if re.search(p, content_lower))
 
+        # Create preliminary features for diversity calculation
+        preliminary_features = ContentFeatures(
+            char_count=char_count,
+            word_count=word_count,
+            hashtag_count=hashtag_count,
+            mention_count=mention_count,
+            url_count=url_count,
+            emoji_count=emoji_count,
+            has_question=has_question,
+            has_cta=has_cta,
+            has_media=has_media,
+            media_type=media_type,
+            video_duration_ms=video_duration_ms,
+            emotional_tone=emotional_tone,
+            emotional_intensity=emotional_intensity,
+            controversy_score=controversy_score,
+            trending_alignment=trending_alignment,
+            viral_hook_count=viral_hook_count,
+            line_count=line_count,
+            caps_ratio=caps_ratio,
+            diversity_score=0.0,  # Calculated next
+            content=content,
+        )
+
+        # Calculate diversity score based on all features
+        diversity_score = self._calculate_diversity_score(preliminary_features)
+
         return ContentFeatures(
             char_count=char_count,
             word_count=word_count,
@@ -198,6 +226,7 @@ class ViralityScorer:
             viral_hook_count=viral_hook_count,
             line_count=line_count,
             caps_ratio=caps_ratio,
+            diversity_score=diversity_score,
             content=content,
         )
 
@@ -232,6 +261,99 @@ class ViralityScorer:
         """Check alignment with trending topics"""
         matches = sum(1 for topic in TRENDING_TOPICS if topic in content)
         return min(matches / 3, 1.0)
+
+    def _calculate_diversity_score(self, features: ContentFeatures) -> float:
+        """
+        Calculate content diversity score based on X algorithm's diversity principles.
+
+        From author_diversity_scorer.rs:
+        - Favors varied content types (text, media, links)
+        - Rewards mixed engagement patterns
+        - Penalizes overly repetitive content
+        - Considers content richness (emojis, hashtags, mentions)
+        """
+        diversity = 0.0
+        max_score = 1.0
+
+        # 1. Content type diversity (0.3 weight)
+        # Variety in content elements increases diversity
+        content_elements = 0
+        if features.has_media:
+            content_elements += 1
+        if features.url_count > 0:
+            content_elements += 1
+        if features.hashtag_count > 0 and features.hashtag_count <= 3:  # Optimal range
+            content_elements += 1
+        if features.mention_count > 0 and features.mention_count <= 3:
+            content_elements += 1
+        if features.emoji_count > 0 and features.emoji_count <= 5:
+            content_elements += 1
+
+        type_diversity = min(content_elements / 5, 1.0) * 0.3
+        diversity += type_diversity
+
+        # 2. Engagement mechanism diversity (0.3 weight)
+        # Multiple ways to engage = higher diversity
+        engagement_mechanisms = 0
+        if features.has_question:  # Prompts replies
+            engagement_mechanisms += 1
+        if features.has_cta:  # Explicit engagement request
+            engagement_mechanisms += 1
+        if features.controversy_score > 0.2:  # Drives discussion
+            engagement_mechanisms += 1
+        if features.viral_hook_count > 0:  # Shareable content
+            engagement_mechanisms += 1
+        if features.trending_alignment > 0.3:  # Topical relevance
+            engagement_mechanisms += 1
+
+        mechanism_diversity = min(engagement_mechanisms / 5, 1.0) * 0.3
+        diversity += mechanism_diversity
+
+        # 3. Content length and structure diversity (0.2 weight)
+        # Not too short, not too long, has structure
+        optimal_length_min = 50
+        optimal_length_max = 500
+
+        if optimal_length_min <= features.char_count <= optimal_length_max:
+            length_score = 1.0
+        elif features.char_count < optimal_length_min:
+            length_score = features.char_count / optimal_length_min
+        else:
+            # Penalty for very long content
+            length_score = max(0, 1.0 - (features.char_count - optimal_length_max) / 1000)
+
+        # Bonus for line breaks (structured content)
+        structure_bonus = min(features.line_count / 10, 0.2)
+        length_diversity = min(length_score + structure_bonus, 1.0) * 0.2
+        diversity += length_diversity
+
+        # 4. Emotional diversity (0.2 weight)
+        # Mix of emotion and information (not extreme in either direction)
+        if features.emotional_tone == "neutral":
+            emotional_diversity = 0.6  # Neutral is moderate
+        else:
+            # Strong emotion but not overwhelming
+            if 0.3 <= features.emotional_intensity <= 0.7:
+                emotional_diversity = 1.0
+            elif features.emotional_intensity < 0.3:
+                emotional_diversity = features.emotional_intensity / 0.3 * 0.8
+            else:  # Too intense can be polarizing
+                emotional_diversity = max(0.5, 1.0 - (features.emotional_intensity - 0.7) * 1.5)
+
+        diversity += emotional_diversity * 0.2
+
+        # Penalty for spam-like patterns
+        spam_penalty = 0.0
+        if features.caps_ratio > 0.5:  # Too much shouting
+            spam_penalty += 0.2
+        if features.hashtag_count > 5:  # Too many hashtags
+            spam_penalty += 0.15
+        if features.mention_count > 5:  # Too many mentions
+            spam_penalty += 0.15
+
+        diversity = max(0, min(diversity - spam_penalty, max_score))
+
+        return round(diversity, 3)
 
     def calculate_signal_scores(self, features: ContentFeatures) -> Dict[str, Dict]:
         """

@@ -5,16 +5,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ViralityMeter from '@/components/ViralityMeter';
 import ScoreBreakdown from '@/components/ScoreBreakdown';
 import ImprovementTips from '@/components/ImprovementTips';
-import GrokAssessment from '@/components/GrokAssessment';
 import { analyzeCombined, CombinedAnalysisResponse } from '@/lib/api';
-import { VIRALITY_TIERS } from '@/lib/tiers';
+import { VIRALITY_TIERS, ALGORITHM_SIGNALS } from '@/lib/tiers';
 
 export default function Home() {
   const [result, setResult] = useState<CombinedAnalysisResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analyzedContent, setAnalyzedContent] = useState('');
-  const [activeTab, setActiveTab] = useState<'breakdown' | 'tips' | 'grok'>('breakdown');
+  const [activeTab, setActiveTab] = useState<'breakdown' | 'tips'>('breakdown');
 
   // Form state - Content
   const [content, setContent] = useState('');
@@ -22,7 +21,6 @@ export default function Home() {
   const [mediaType, setMediaType] = useState('none');
   const [videoDuration, setVideoDuration] = useState<number | undefined>();
   const [contentType, setContentType] = useState<'short' | 'thread' | 'article' | 'longform' | 'quote'>('short');
-  const [runGrokAnalysis, setRunGrokAnalysis] = useState(false);
 
   // Form state - Account
   const [followersCount, setFollowersCount] = useState(1000);
@@ -70,7 +68,87 @@ export default function Home() {
   };
 
   const charCount = content.length;
-  const isOverLimit = charCount > 280;
+  const warningThreshold = 1000;
+  const isVeryLong = charCount > 2000;
+
+  const accountTemplates = [
+    {
+      label: 'Micro',
+      icon: '🌱',
+      followers: 5000,
+      following: 2000,
+      likes: 50,
+      replies: 10,
+      retweets: 5,
+      posts: 7,
+      age: 180,
+      verified: false,
+      tooltip: '<10k followers - Building presence'
+    },
+    {
+      label: 'Small',
+      icon: '📈',
+      followers: 25000,
+      following: 5000,
+      likes: 200,
+      replies: 30,
+      retweets: 25,
+      posts: 10,
+      age: 365,
+      verified: false,
+      tooltip: '10k-50k followers - Growing influence'
+    },
+    {
+      label: 'Medium',
+      icon: '🚀',
+      followers: 75000,
+      following: 3000,
+      likes: 500,
+      replies: 80,
+      retweets: 100,
+      posts: 14,
+      age: 730,
+      verified: true,
+      tooltip: '50k-100k followers - Established voice'
+    },
+    {
+      label: 'Med-Large',
+      icon: '⭐',
+      followers: 250000,
+      following: 2000,
+      likes: 2000,
+      replies: 150,
+      retweets: 300,
+      posts: 21,
+      age: 1095,
+      verified: true,
+      tooltip: '100k-500k followers - Significant reach'
+    },
+    {
+      label: 'Large',
+      icon: '👑',
+      followers: 750000,
+      following: 1000,
+      likes: 5000,
+      replies: 300,
+      retweets: 800,
+      posts: 28,
+      age: 1825,
+      verified: true,
+      tooltip: '500k+ followers - Major influencer'
+    },
+  ];
+
+  const applyTemplate = (template: typeof accountTemplates[0]) => {
+    setFollowersCount(template.followers);
+    setFollowingCount(template.following);
+    setAvgLikes(template.likes);
+    setAvgReplies(template.replies);
+    setAvgRetweets(template.retweets);
+    setPostsPerWeek(template.posts);
+    setAccountAgeDays(template.age);
+    setIsVerified(template.verified);
+  };
 
   const examplePosts = [
     { label: 'Hot Take', text: 'Unpopular opinion: Tabs are better than spaces and I will die on this hill. Fight me.' },
@@ -138,40 +216,43 @@ export default function Home() {
                 </div>
                 <div className="p-4 space-y-3">
                   {/* Text Input */}
-                  <div className="relative">
+                  <div className="relative group">
                     <textarea
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
-                      placeholder="Enter tweet content to analyze..."
-                      className={`terminal-input w-full h-28 resize-none text-sm ${
-                        isOverLimit ? 'border-term-red' : ''
+                      placeholder="Enter content to analyze (threads, long-form, tweets, etc.)..."
+                      className={`terminal-input w-full h-32 resize-y text-sm ${
+                        isVeryLong ? 'border-term-amber' : ''
                       }`}
                       disabled={loading}
+                      title="No character limit - analyze any content length"
                     />
                     <div className={`absolute bottom-2 right-2 text-xs font-mono ${
-                      isOverLimit ? 'text-term-red' : charCount > 250 ? 'text-term-amber' : 'text-term-gray'
+                      isVeryLong ? 'text-term-amber' : charCount > warningThreshold ? 'text-term-cyan' : 'text-term-gray'
                     }`}>
-                      {charCount}/280
+                      {charCount.toLocaleString()} chars
+                      {isVeryLong && <span className="ml-1">⚠</span>}
                     </div>
                   </div>
 
                   {/* Content Type Selector */}
                   <div>
-                    <label className="block text-[10px] text-term-cyan mb-1.5 font-mono uppercase">
+                    <label className="block text-[10px] text-term-cyan mb-1.5 font-mono uppercase" title="Content format affects engagement patterns">
                       content_type
                     </label>
                     <div className="flex flex-wrap gap-1.5">
                       {[
-                        { value: 'short', label: 'Short Tweet' },
-                        { value: 'thread', label: 'Thread' },
-                        { value: 'article', label: 'Article' },
-                        { value: 'longform', label: 'Long-Form' },
-                        { value: 'quote', label: 'Quote Retweet' },
+                        { value: 'short', label: 'Short Tweet', tooltip: 'Standard tweet (1.0x base)' },
+                        { value: 'thread', label: 'Thread', tooltip: 'Multi-tweet thread (1.15x boost)' },
+                        { value: 'article', label: 'Article', tooltip: 'Link to article (1.05x boost)' },
+                        { value: 'longform', label: 'Long-Form', tooltip: 'Extended content (0.95x)' },
+                        { value: 'quote', label: 'Quote Retweet', tooltip: 'Quote with context (1.1x boost)' },
                       ].map((type) => (
                         <button
                           key={type.value}
                           type="button"
                           onClick={() => setContentType(type.value as typeof contentType)}
+                          title={type.tooltip}
                           className={`text-[10px] px-2 py-1 font-mono transition-colors ${
                             contentType === type.value
                               ? 'bg-term-cyan text-term-bg'
@@ -247,17 +328,6 @@ export default function Home() {
                         )}
                       </motion.div>
                     )}
-
-                    {/* Grok Analytics Checkbox */}
-                    <label className="flex items-center gap-1.5 cursor-pointer ml-auto">
-                      <input
-                        type="checkbox"
-                        checked={runGrokAnalysis}
-                        onChange={(e) => setRunGrokAnalysis(e.target.checked)}
-                        className="w-3 h-3"
-                      />
-                      <span className="text-term-cyan">Grok Analytics</span>
-                    </label>
                   </div>
                 </div>
               </motion.div>
@@ -276,10 +346,31 @@ export default function Home() {
                   <span className="text-xs text-term-gray ml-2">account_metrics.conf</span>
                 </div>
                 <div className="p-4 space-y-3">
+                  {/* Account Templates */}
+                  <div>
+                    <label className="block text-[10px] text-term-amber mb-1.5 font-mono uppercase" title="Quick presets for different account sizes">
+                      account_templates
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {accountTemplates.map((template) => (
+                        <button
+                          key={template.label}
+                          type="button"
+                          onClick={() => applyTemplate(template)}
+                          title={template.tooltip}
+                          className="text-[10px] px-2 py-1 font-mono bg-term-bg border border-term-border text-term-gray hover:border-term-amber hover:text-term-amber transition-colors flex items-center gap-1"
+                        >
+                          <span>{template.icon}</span>
+                          <span>{template.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Followers/Following */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[10px] text-term-green mb-1 font-mono uppercase">
+                      <label className="block text-[10px] text-term-green mb-1 font-mono uppercase" title="Your total follower count - key metric for reach">
                         followers
                       </label>
                       <input
@@ -288,10 +379,11 @@ export default function Home() {
                         onChange={(e) => setFollowersCount(parseInt(e.target.value) || 0)}
                         className="terminal-input w-full py-2 text-sm"
                         min="0"
+                        title="Total followers"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-term-cyan mb-1 font-mono uppercase">
+                      <label className="block text-[10px] text-term-cyan mb-1 font-mono uppercase" title="Accounts you follow - affects follower quality ratio">
                         following
                       </label>
                       <input
@@ -306,38 +398,41 @@ export default function Home() {
 
                   {/* Average Engagement */}
                   <div>
-                    <label className="block text-[10px] text-term-amber mb-1 font-mono uppercase">
+                    <label className="block text-[10px] text-term-amber mb-1 font-mono uppercase" title="Average engagement metrics per post - critical for engagement rate">
                       avg_engagement_per_post
                     </label>
                     <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <div className="text-[10px] text-term-gray mb-1 font-mono">likes</div>
+                        <div className="text-[10px] text-term-gray mb-1 font-mono" title="Avg likes per post">likes</div>
                         <input
                           type="number"
                           value={avgLikes}
                           onChange={(e) => setAvgLikes(parseFloat(e.target.value) || 0)}
                           className="terminal-input w-full py-1.5 text-sm"
                           min="0"
+                          title="Average likes per post"
                         />
                       </div>
                       <div>
-                        <div className="text-[10px] text-term-gray mb-1 font-mono">replies</div>
+                        <div className="text-[10px] text-term-gray mb-1 font-mono" title="Avg replies per post - high value signal">replies</div>
                         <input
                           type="number"
                           value={avgReplies}
                           onChange={(e) => setAvgReplies(parseFloat(e.target.value) || 0)}
                           className="terminal-input w-full py-1.5 text-sm"
                           min="0"
+                          title="Average replies per post"
                         />
                       </div>
                       <div>
-                        <div className="text-[10px] text-term-gray mb-1 font-mono">retweets</div>
+                        <div className="text-[10px] text-term-gray mb-1 font-mono" title="Avg retweets per post - amplification signal">retweets</div>
                         <input
                           type="number"
                           value={avgRetweets}
                           onChange={(e) => setAvgRetweets(parseFloat(e.target.value) || 0)}
                           className="terminal-input w-full py-1.5 text-sm"
                           min="0"
+                          title="Average retweets per post"
                         />
                       </div>
                     </div>
@@ -346,7 +441,7 @@ export default function Home() {
                   {/* Activity & Age */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[10px] text-term-gray mb-1 font-mono uppercase">
+                      <label className="block text-[10px] text-term-gray mb-1 font-mono uppercase" title="Posting frequency - consistency matters (1-5 posts/day optimal)">
                         posts_per_week
                       </label>
                       <input
@@ -356,10 +451,11 @@ export default function Home() {
                         className="terminal-input w-full py-2 text-sm"
                         min="0"
                         step="0.5"
+                        title="Posts per week (7-35 is typical)"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-term-gray mb-1 font-mono uppercase">
+                      <label className="block text-[10px] text-term-gray mb-1 font-mono uppercase" title="Account age in days - older accounts have more authority">
                         account_age_days
                       </label>
                       <input
@@ -368,6 +464,7 @@ export default function Home() {
                         onChange={(e) => setAccountAgeDays(parseInt(e.target.value) || 1)}
                         className="terminal-input w-full py-2 text-sm"
                         min="1"
+                        title="Account age in days"
                       />
                     </div>
                   </div>
@@ -375,7 +472,7 @@ export default function Home() {
                   {/* Niche & Verification */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[10px] text-term-gray mb-1 font-mono uppercase">
+                      <label className="block text-[10px] text-term-gray mb-1 font-mono uppercase" title="Content category/niche">
                         niche
                       </label>
                       <select
@@ -444,7 +541,6 @@ export default function Home() {
                   {[
                     { id: 'breakdown', label: 'BREAKDOWN' },
                     { id: 'tips', label: 'TIPS' },
-                    ...(runGrokAnalysis ? [{ id: 'grok', label: 'GROK' }] : []),
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -475,11 +571,6 @@ export default function Home() {
                   {activeTab === 'tips' && (
                     <motion.div key="tips" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                       <ImprovementTips tips={result.post_score.improvements} />
-                    </motion.div>
-                  )}
-                  {runGrokAnalysis && activeTab === 'grok' && (
-                    <motion.div key="grok" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      <GrokAssessment content={analyzedContent} />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -622,6 +713,22 @@ export default function Home() {
                     <StatCell label="tags" value={result.post_score.content_stats.hashtag_count} />
                     <StatCell label="hooks" value={result.post_score.content_stats.viral_hooks} />
                   </div>
+                  <div className="mb-3 p-2 bg-term-bg border border-term-cyan/30">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-term-cyan font-mono uppercase" title="Content diversity based on X algorithm - variety increases distribution">
+                        diversity_score
+                      </span>
+                      <span className="text-sm font-mono font-bold text-term-cyan">
+                        {(result.post_score.content_stats.diversity_score * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="mt-1 h-1 bg-term-bg-light rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-term-cyan transition-all duration-500"
+                        style={{ width: `${result.post_score.content_stats.diversity_score * 100}%` }}
+                      />
+                    </div>
+                  </div>
                   <div className="flex flex-wrap gap-1.5">
                     {result.post_score.content_stats.has_question && (
                       <span className="text-[10px] bg-term-bg border border-term-green-dim text-term-green px-2 py-0.5 font-mono">
@@ -641,6 +748,84 @@ export default function Home() {
               </motion.div>
             )}
 
+            {/* X Algorithm Parameters Box */}
+            {result && (
+              <motion.div
+                className="terminal-card border-2 border-term-cyan/30"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <div className="terminal-card-header bg-term-cyan/10">
+                  <div className="terminal-dot terminal-dot-red" />
+                  <div className="terminal-dot terminal-dot-yellow" />
+                  <div className="terminal-dot terminal-dot-green" />
+                  <span className="text-xs text-term-cyan ml-2 font-bold">X_ALGORITHM_PARAMS.rs</span>
+                </div>
+                <div className="p-3 space-y-3">
+                  <div className="text-xs text-term-gray font-mono">
+                    <span className="text-term-green">$</span> cat phoenix_scorer.rs
+                  </div>
+
+                  {/* Positive Signals */}
+                  <div>
+                    <div className="text-[10px] text-term-green uppercase mb-1.5 font-mono">
+                      // POSITIVE SIGNALS (boost)
+                    </div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {ALGORITHM_SIGNALS.positive.map((signal) => (
+                        <div
+                          key={signal.key}
+                          className="flex items-center gap-1.5 text-[10px] font-mono"
+                          title={signal.description}
+                        >
+                          <span className="text-term-green">+</span>
+                          <span className="text-term-gray">{signal.label}</span>
+                          <span className={`ml-auto ${
+                            signal.weight === 'HIGH' ? 'text-term-green' :
+                            signal.weight === 'MEDIUM' ? 'text-term-amber' : 'text-term-gray'
+                          }`}>
+                            {signal.weight}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Negative Signals */}
+                  <div>
+                    <div className="text-[10px] text-term-red uppercase mb-1.5 font-mono">
+                      // NEGATIVE SIGNALS (penalty)
+                    </div>
+                    <div className="space-y-0.5">
+                      {ALGORITHM_SIGNALS.negative.map((signal) => (
+                        <div
+                          key={signal.key}
+                          className="flex items-center gap-1.5 text-[10px] font-mono"
+                          title={signal.description}
+                        >
+                          <span className="text-term-red">-</span>
+                          <span className="text-term-gray">{signal.label}</span>
+                          <span className="text-term-red ml-auto">{signal.weight}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="text-[10px] text-term-gray pt-2 border-t border-term-border font-mono">
+                    Source: <a
+                      href="https://github.com/AbdelStark/x-algorithm"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-term-cyan hover:underline"
+                    >
+                      github.com/AbdelStark/x-algorithm
+                    </a>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {/* Desktop: Full breakdown */}
             {result && (
               <div className="hidden lg:block space-y-4">
@@ -652,7 +837,6 @@ export default function Home() {
                   negativeRisk={result.post_score.negative_signal_risk}
                 />
                 <ImprovementTips tips={result.post_score.improvements} />
-                {runGrokAnalysis && <GrokAssessment content={analyzedContent} />}
               </div>
             )}
           </div>
