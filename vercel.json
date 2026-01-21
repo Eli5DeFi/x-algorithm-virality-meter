@@ -1,8 +1,7 @@
 {
-    "buildCommand": "npm run build",
-    "outputDirectory": ".next",
-    "devCommand": "npm run dev",
-    "installCommand": "npm install",
+    "buildCommand": "cd virality-meter/frontend && npm run build",
+    "devCommand": "cd virality-meter/frontend && npm run dev",
+    "installCommand": "cd virality-meter/frontend && npm install",
     "framework": "nextjs",
-    "rootDirectory": "virality-meter/frontend"
+    "outputDirectory": "virality-meter/frontend/.next"
 }
