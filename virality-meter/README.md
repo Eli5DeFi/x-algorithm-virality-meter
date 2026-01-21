@@ -1,17 +1,24 @@
 # X Algorithm Virality Meter 🔮
 
-A web application that analyzes your content's viral potential using X's (Twitter's) actual recommendation algorithm signals. Features 10 humorous virality tiers and Grok AI-powered assessments.
+A web application that analyzes your content's viral potential using X's (Twitter's) actual recommendation algorithm signals. Features 10 humorous virality tiers and AI-powered assessments.
 
 ![Virality Meter](https://img.shields.io/badge/Powered%20by-X%20Algorithm-blue)
-![Grok AI](https://img.shields.io/badge/AI-Grok%20via%20Puter.js-purple)
+![Live Demo](https://img.shields.io/badge/Live-Railway-purple)
+
+## 🌐 Live Demo
+
+- **Frontend:** [https://frontend-sigma-six-50.vercel.app](https://frontend-sigma-six-50.vercel.app)
+- **Backend API:** [https://x-algorithm-virality-meter-production.up.railway.app](https://x-algorithm-virality-meter-production.up.railway.app)
+- **API Docs:** [https://x-algorithm-virality-meter-production.up.railway.app/docs](https://x-algorithm-virality-meter-production.up.railway.app/docs)
 
 ## Features
 
 - **10 Virality Tiers** - From "Digital Tombstone" 🪦 to "Elon's Fav (God Mode)" 🚀
 - **Algorithm-Based Scoring** - Uses actual X recommendation signals (19 engagement types)
 - **Improvement Tips** - Actionable suggestions to boost your viral potential
-- **Grok AI Assessment** - Free AI analysis powered by Puter.js
+- **Grok AI Assessment** - AI-powered content analysis
 - **Account Simulator** - Analyze your account's overall virality tier
+- **Live Deployment** - Production backend on Railway, frontend on Vercel
 
 ## Virality Tiers
 
@@ -28,7 +35,32 @@ A web application that analyzes your content's viral potential using X's (Twitte
 | 9 | 81-90% | ⭐ Main Character Energy |
 | 10 | 91-100% | 🚀 Elon's Fav (God Mode) |
 
-## Quick Start
+## 🚀 Deployment
+
+The app is live and deployed:
+
+- **Backend:** Railway (automatic deployments from main branch)
+- **Frontend:** Vercel (automatic deployments from main branch)
+
+### Deploy Your Own
+
+#### Backend (Railway)
+
+1. Fork this repository
+2. Sign up at [Railway.app](https://railway.app)
+3. Click "New Project" → "Deploy from GitHub repo"
+4. Select your fork and set root directory to `virality-meter/backend`
+5. Railway will auto-detect the configuration from `railway.json`
+
+#### Frontend (Vercel)
+
+1. Sign up at [Vercel.com](https://vercel.com)
+2. Import your GitHub repository
+3. Set root directory to `virality-meter/frontend`
+4. Add environment variable: `NEXT_PUBLIC_API_URL` = `your-railway-backend-url`
+5. Deploy!
+
+## Quick Start (Local Development)
 
 ### 1. Start the Backend
 
@@ -56,12 +88,13 @@ Visit [http://localhost:3000](http://localhost:3000)
 - Next.js 14 with TypeScript
 - Tailwind CSS
 - Framer Motion for animations
-- Puter.js for free Grok API
+- Deployed on Vercel
 
 **Backend:**
 - Python FastAPI
 - Algorithm-based scoring engine
-- Based on [X's open-source algorithm](https://github.com/xai-org/x-algorithm)
+- Based on [@AbdelStark's x-algorithm](https://github.com/AbdelStark/x-algorithm)
+- Deployed on Railway
 
 ## Algorithm Signals
 
@@ -93,14 +126,9 @@ The scoring engine analyzes 19 engagement signals from X's actual algorithm:
 - `GET /api/tiers` - Get all tier definitions
 - `GET /docs` - Interactive API documentation
 
-## Grok AI Integration
+## AI-Powered Analysis
 
-This app uses [Puter.js](https://puter.com) for free, unlimited Grok API access. No API keys required - users authenticate through Puter directly.
-
-```javascript
-// Free Grok API via Puter.js
-puter.ai.chat(prompt, { model: 'grok-beta' })
-```
+The app includes AI-powered content assessment to provide additional insights on viral potential, engagement drivers, and improvement opportunities.
 
 ## Screenshots
 
@@ -110,9 +138,13 @@ Paste your post and get instant virality predictions with improvement tips.
 ### Account Simulator
 Enter your account metrics to see your overall virality tier and growth recommendations.
 
+## Credits
+
+This project is based on [@AbdelStark's x-algorithm](https://github.com/AbdelStark/x-algorithm), an open-source implementation of X's (Twitter's) recommendation algorithm.
+
 ## License
 
-MIT License - Built using the [open-source X Algorithm](https://github.com/xai-org/x-algorithm)
+MIT License
 
 ---
 

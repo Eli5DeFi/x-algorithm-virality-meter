@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import Script from 'next/script'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -17,10 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head>
-        {/* Puter.js for free Grok API */}
-        <Script src="https://js.puter.com/v2/" strategy="beforeInteractive" />
-      </head>
+      <head />
       <body className={`${inter.className} bg-x-black text-white min-h-screen`}>
         {children}
       </body>
