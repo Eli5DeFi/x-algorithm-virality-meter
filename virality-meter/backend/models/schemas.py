@@ -13,6 +13,13 @@ class MediaType(str, Enum):
     GIF = "gif"
     POLL = "poll"
 
+class ContentType(str, Enum):
+    SHORT = "short"
+    THREAD = "thread"
+    ARTICLE = "article"
+    LONGFORM = "longform"
+    QUOTE = "quote"
+
 class ContentAnalysisRequest(BaseModel):
     """Request to analyze content for virality"""
     content: str = Field(..., min_length=1, max_length=4000, description="The post content to analyze")
@@ -92,3 +99,34 @@ class AccountSimulationResponse(BaseModel):
     # Projections
     projected_reach_multiplier: float
     viral_post_probability: float
+
+class CombinedAnalysisRequest(BaseModel):
+    """Request to analyze content and account together"""
+    # Content fields
+    content: str = Field(..., min_length=1, max_length=4000, description="The post content to analyze")
+    has_media: bool = Field(default=False, description="Whether the post has media")
+    media_type: MediaType = Field(default=MediaType.NONE, description="Type of media attached")
+    video_duration_ms: Optional[int] = Field(default=None, description="Video duration in milliseconds")
+    content_type: ContentType = Field(default=ContentType.SHORT, description="Type of content")
+
+    # Account fields
+    followers_count: int = Field(..., ge=0)
+    following_count: int = Field(..., ge=0)
+    avg_likes: float = Field(default=0, ge=0)
+    avg_replies: float = Field(default=0, ge=0)
+    avg_retweets: float = Field(default=0, ge=0)
+    posts_per_week: float = Field(default=7, ge=0)
+    account_age_days: int = Field(default=365, ge=1)
+    is_verified: bool = Field(default=False)
+    niche: Optional[str] = Field(default=None)
+
+class CombinedAnalysisResponse(BaseModel):
+    """Response with combined analysis of account and post"""
+    account_score: AccountSimulationResponse
+    post_score: ContentAnalysisResponse
+    aggregate_score: int = Field(..., ge=0, le=100)
+    aggregate_tier_level: int
+    aggregate_tier_name: str
+    aggregate_tier_emoji: str
+    aggregate_tier_description: str
+    aggregate_tier_color: str

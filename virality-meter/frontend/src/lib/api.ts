@@ -2,6 +2,34 @@ import { ContentAnalysisResponse, AccountSimulationResponse, GrokAssessment } fr
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+export interface CombinedAnalysisParams {
+  content: string;
+  hasMedia: boolean;
+  mediaType: string;
+  videoDuration?: number;
+  contentType: string;
+  followersCount: number;
+  followingCount: number;
+  avgLikes: number;
+  avgReplies: number;
+  avgRetweets: number;
+  postsPerWeek: number;
+  accountAgeDays: number;
+  isVerified: boolean;
+  niche: string;
+}
+
+export interface CombinedAnalysisResponse {
+  account_score: AccountSimulationResponse;
+  post_score: ContentAnalysisResponse;
+  aggregate_score: number;
+  aggregate_tier_level: number;
+  aggregate_tier_name: string;
+  aggregate_tier_emoji: string;
+  aggregate_tier_description: string;
+  aggregate_tier_color: string;
+}
+
 export async function analyzeContent(
   content: string,
   hasMedia: boolean = false,
@@ -64,11 +92,42 @@ export async function simulateAccount(
   return response.json();
 }
 
-// Grok AI Assessment using Puter.js (client-side)
+export async function analyzeCombined(params: CombinedAnalysisParams): Promise<CombinedAnalysisResponse> {
+  const response = await fetch(`${API_URL}/api/analyze/combined`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      content: params.content,
+      has_media: params.hasMedia,
+      media_type: params.mediaType,
+      video_duration_ms: params.videoDuration,
+      content_type: params.contentType,
+      followers_count: params.followersCount,
+      following_count: params.followingCount,
+      avg_likes: params.avgLikes,
+      avg_replies: params.avgReplies,
+      avg_retweets: params.avgRetweets,
+      posts_per_week: params.postsPerWeek,
+      account_age_days: params.accountAgeDays,
+      is_verified: params.isVerified,
+      niche: params.niche,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to analyze combined data');
+  }
+
+  return response.json();
+}
+
+// X Algorithm Parameter Assessment
 export async function getGrokAssessment(content: string): Promise<GrokAssessment> {
-  // @ts-ignore - puter is loaded via script tag
+  // @ts-ignore
   if (typeof puter === 'undefined') {
-    throw new Error('Puter.js not loaded');
+    throw new Error('AI service not loaded');
   }
 
   const prompt = `You are analyzing a social media post for X (Twitter) viral potential. Be witty, direct, and helpful.
@@ -107,7 +166,7 @@ Respond in this exact JSON format (no markdown, just pure JSON):
       similar_viral_posts: [],
     };
   } catch (error) {
-    console.error('Grok API error:', error);
+    console.error('AI API error:', error);
     throw error;
   }
 }
