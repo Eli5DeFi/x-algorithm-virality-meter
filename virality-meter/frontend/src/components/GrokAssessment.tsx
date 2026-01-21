@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GrokAssessment as GrokAssessmentType } from '@/lib/types';
 import { getGrokAssessment } from '@/lib/api';
@@ -26,12 +26,17 @@ export default function GrokAssessment({ content }: GrokAssessmentProps) {
       const result = await getGrokAssessment(content);
       setAssessment(result);
     } catch (err) {
-      setError('Failed to connect to Grok API');
+      setError('Failed to connect to AI service');
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
+
+  // Auto-fetch assessment when component mounts
+  useEffect(() => {
+    fetchAssessment();
+  }, [content]);
 
   return (
     <div className="terminal-card">
@@ -45,24 +50,8 @@ export default function GrokAssessment({ content }: GrokAssessmentProps) {
       </div>
 
       <div className="p-3">
-        {/* Action buttons */}
+        {/* X Parameters Toggle */}
         <div className="flex gap-2 mb-3">
-          {!assessment && (
-            <button
-              onClick={fetchAssessment}
-              disabled={loading || !content.trim()}
-              className="terminal-btn text-xs flex-1 py-2 disabled:opacity-30"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="animate-spin">◌</span>
-                  ANALYZING...
-                </span>
-              ) : (
-                <span>&gt; RUN_GROK_ANALYSIS</span>
-              )}
-            </button>
-          )}
           <button
             onClick={() => setShowParams(!showParams)}
             className={`terminal-btn text-xs py-2 px-3 ${showParams ? 'terminal-btn-primary' : ''}`}
@@ -150,18 +139,11 @@ export default function GrokAssessment({ content }: GrokAssessmentProps) {
           </div>
         )}
 
-        {/* Placeholder */}
-        {!assessment && !loading && !error && (
-          <div className="text-xs text-term-gray font-mono">
-            &gt; Ready for Grok AI analysis
-          </div>
-        )}
-
         {/* Loading */}
         {loading && (
           <div className="flex items-center gap-2 text-xs text-term-cyan font-mono">
             <span className="animate-pulse">●</span>
-            Grok is processing...
+            Analyzing with AI...
           </div>
         )}
 
