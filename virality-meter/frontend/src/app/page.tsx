@@ -2,60 +2,28 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ViralityMeter from '@/components/ViralityMeter';
 import ScoreBreakdown from '@/components/ScoreBreakdown';
 import ImprovementTips from '@/components/ImprovementTips';
-import XAlgorithmParams from '@/components/XAlgorithmParams';
-import DiversityScore from '@/components/DiversityScore';
-import Tooltip from '@/components/Tooltip';
+import AlgorithmExplainer from '@/components/AlgorithmExplainer';
+import Actionables from '@/components/Actionables';
+import DisclaimerBanner from '@/components/DisclaimerBanner';
 import { analyzeCombined, CombinedAnalysisResponse } from '@/lib/api';
-import { VIRALITY_TIERS } from '@/lib/tiers';
-import { getTierForScore, getTierColor } from '@/lib/tiers';
-
-// Account size templates
-const ACCOUNT_TEMPLATES = [
-  { label: 'Micro', followers: 500, following: 300, likes: 10, replies: 2, retweets: 1, description: '<1K followers' },
-  { label: 'Small', followers: 5000, following: 1000, likes: 50, replies: 10, retweets: 5, description: '1K-10K followers' },
-  { label: 'Medium', followers: 25000, following: 2000, likes: 200, replies: 30, retweets: 25, description: '10K-50K followers' },
-  { label: 'Med-Large', followers: 100000, following: 3000, likes: 800, replies: 100, retweets: 150, description: '50K-250K followers' },
-  { label: 'Large', followers: 500000, following: 2000, likes: 5000, replies: 500, retweets: 1000, description: '250K+ followers' },
-];
-
-// Field tooltips
-const TOOLTIPS = {
-  followers: 'Total number of accounts following you',
-  following: 'Total number of accounts you follow',
-  likes: 'Average likes per post over last 30 days',
-  replies: 'Average replies/comments per post',
-  retweets: 'Average retweets/reposts per post',
-  postsPerWeek: 'How many times you post per week on average',
-  accountAge: 'How long your account has existed in days',
-  niche: 'Primary topic/industry of your content',
-  verified: 'X Premium (formerly Twitter Blue) subscriber',
-  contentType: 'Format of your post (affects optimal length)',
-  media: 'Include image, video, GIF, or poll',
-};
+import { VIRALITY_TIERS, ALGORITHM_SIGNALS } from '@/lib/tiers';
 
 export default function Home() {
   const [result, setResult] = useState<CombinedAnalysisResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'breakdown' | 'tips' | 'diversity' | 'params'>('breakdown');
+  const [analyzedContent, setAnalyzedContent] = useState('');
+  const [activeTab, setActiveTab] = useState<'breakdown' | 'tips' | 'actionables' | 'algorithm'>('breakdown');
 
   // Form state - Content
   const [content, setContent] = useState('');
-  const [contentType, setContentType] = useState('short');
   const [hasMedia, setHasMedia] = useState(false);
   const [mediaType, setMediaType] = useState('none');
   const [videoDuration, setVideoDuration] = useState<number | undefined>();
-
-  // Content type options
-  const CONTENT_TYPES = [
-    { value: 'short', label: 'Short Tweet', description: 'Standard tweet under 280 chars' },
-    { value: 'thread', label: 'Thread', description: 'Multi-tweet thread (1/, 2/, etc.)' },
-    { value: 'longform', label: 'Long Form', description: 'Extended post over 280 chars' },
-    { value: 'quote', label: 'Quote RT', description: 'Quote retweet with commentary' },
-    { value: 'article', label: 'Article', description: 'X article or long-form note' },
-  ];
+  const [contentType, setContentType] = useState<'short' | 'thread' | 'article' | 'longform' | 'quote'>('short');
 
   // Form state - Account
   const [followersCount, setFollowersCount] = useState(1000);
@@ -74,6 +42,7 @@ export default function Home() {
 
     setLoading(true);
     setError(null);
+    setAnalyzedContent(content);
 
     try {
       const response = await analyzeCombined({
@@ -94,22 +63,95 @@ export default function Home() {
       });
       setResult(response);
     } catch (err) {
-      setError('Connection failed. Please check the backend connection.');
+      setError('Connection failed. Ensure backend is running on localhost:8000');
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const applyTemplate = (template: typeof ACCOUNT_TEMPLATES[0]) => {
+  const charCount = content.length;
+  const warningThreshold = 1000;
+  const isVeryLong = charCount > 2000;
+
+  const accountTemplates = [
+    {
+      label: 'Micro',
+      icon: '🌱',
+      followers: 5000,
+      following: 2000,
+      likes: 50,
+      replies: 10,
+      retweets: 5,
+      posts: 7,
+      age: 180,
+      verified: false,
+      tooltip: '<10k followers - Building presence'
+    },
+    {
+      label: 'Small',
+      icon: '📈',
+      followers: 25000,
+      following: 5000,
+      likes: 200,
+      replies: 30,
+      retweets: 25,
+      posts: 10,
+      age: 365,
+      verified: false,
+      tooltip: '10k-50k followers - Growing influence'
+    },
+    {
+      label: 'Medium',
+      icon: '🚀',
+      followers: 75000,
+      following: 3000,
+      likes: 500,
+      replies: 80,
+      retweets: 100,
+      posts: 14,
+      age: 730,
+      verified: true,
+      tooltip: '50k-100k followers - Established voice'
+    },
+    {
+      label: 'Med-Large',
+      icon: '⭐',
+      followers: 250000,
+      following: 2000,
+      likes: 2000,
+      replies: 150,
+      retweets: 300,
+      posts: 21,
+      age: 1095,
+      verified: true,
+      tooltip: '100k-500k followers - Significant reach'
+    },
+    {
+      label: 'Large',
+      icon: '👑',
+      followers: 750000,
+      following: 1000,
+      likes: 5000,
+      replies: 300,
+      retweets: 800,
+      posts: 28,
+      age: 1825,
+      verified: true,
+      tooltip: '500k+ followers - Major influencer'
+    },
+  ];
+
+  const applyTemplate = (template: typeof accountTemplates[0]) => {
     setFollowersCount(template.followers);
     setFollowingCount(template.following);
     setAvgLikes(template.likes);
     setAvgReplies(template.replies);
     setAvgRetweets(template.retweets);
+    setPostsPerWeek(template.posts);
+    setAccountAgeDays(template.age);
+    setIsVerified(template.verified);
   };
-
-  const charCount = content.length;
 
   const examplePosts = [
     { label: 'Hot Take', text: 'Unpopular opinion: Tabs are better than spaces and I will die on this hill. Fight me.' },
@@ -131,12 +173,15 @@ export default function Home() {
                 VIRALITY_METER
               </h1>
               <p className="text-[10px] text-term-gray font-mono">
-                X Algorithm Analysis Tool
+                Combined Account & Post Analysis
               </p>
             </div>
           </div>
         </div>
       </header>
+
+      {/* Disclaimer Banner */}
+      <DisclaimerBanner />
 
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* Tier Legend */}
@@ -160,7 +205,7 @@ export default function Home() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-4">
-          {/* Left Column - Input Form */}
+          {/* Left Column - Combined Input Form */}
           <div className="space-y-4">
             <form onSubmit={handleAnalyze} className="space-y-4">
               {/* Content Input Card */}
@@ -176,17 +221,53 @@ export default function Home() {
                   <span className="text-xs text-term-gray ml-2">content_input.sh</span>
                 </div>
                 <div className="p-4 space-y-3">
-                  {/* Text Input - No character limit */}
-                  <div className="relative">
+                  {/* Text Input */}
+                  <div className="relative group">
                     <textarea
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
-                      placeholder="Enter your post content to analyze... (threads, long-form, articles all supported)"
-                      className="terminal-input w-full h-32 resize-none text-sm"
+                      placeholder="Enter content to analyze (threads, long-form, tweets, etc.)..."
+                      className={`terminal-input w-full h-32 resize-y text-sm ${
+                        isVeryLong ? 'border-term-amber' : ''
+                      }`}
                       disabled={loading}
+                      title="No character limit - analyze any content length"
                     />
-                    <div className="absolute bottom-2 right-2 text-xs font-mono text-term-gray">
-                      {charCount} chars
+                    <div className={`absolute bottom-2 right-2 text-xs font-mono ${
+                      isVeryLong ? 'text-term-amber' : charCount > warningThreshold ? 'text-term-cyan' : 'text-term-gray'
+                    }`}>
+                      {charCount.toLocaleString()} chars
+                      {isVeryLong && <span className="ml-1">⚠</span>}
+                    </div>
+                  </div>
+
+                  {/* Content Type Selector */}
+                  <div>
+                    <label className="block text-[10px] text-term-cyan mb-1.5 font-mono uppercase" title="Content format affects engagement patterns">
+                      content_type
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { value: 'short', label: 'Short Tweet', tooltip: 'Standard tweet (1.0x base)' },
+                        { value: 'thread', label: 'Thread', tooltip: 'Multi-tweet thread (1.15x boost)' },
+                        { value: 'article', label: 'Article', tooltip: 'Link to article (1.05x boost)' },
+                        { value: 'longform', label: 'Long-Form', tooltip: 'Extended content (0.95x)' },
+                        { value: 'quote', label: 'Quote Retweet', tooltip: 'Quote with context (1.1x boost)' },
+                      ].map((type) => (
+                        <button
+                          key={type.value}
+                          type="button"
+                          onClick={() => setContentType(type.value as typeof contentType)}
+                          title={type.tooltip}
+                          className={`text-[10px] px-2 py-1 font-mono transition-colors ${
+                            contentType === type.value
+                              ? 'bg-term-cyan text-term-bg'
+                              : 'bg-term-bg border border-term-border text-term-gray hover:border-term-cyan'
+                          }`}
+                        >
+                          {type.label}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
@@ -207,23 +288,21 @@ export default function Home() {
 
                   {/* Media Options */}
                   <div className="flex flex-wrap items-center gap-3 text-xs font-mono">
-                    <Tooltip content={TOOLTIPS.media}>
-                      <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={hasMedia}
-                          onChange={(e) => {
-                            setHasMedia(e.target.checked);
-                            if (!e.target.checked) {
-                              setMediaType('none');
-                              setVideoDuration(undefined);
-                            }
-                          }}
-                          className="w-3 h-3"
-                        />
-                        <span className="text-term-gray hover:text-term-green">--media</span>
-                      </label>
-                    </Tooltip>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={hasMedia}
+                        onChange={(e) => {
+                          setHasMedia(e.target.checked);
+                          if (!e.target.checked) {
+                            setMediaType('none');
+                            setVideoDuration(undefined);
+                          }
+                        }}
+                        className="w-3 h-3"
+                      />
+                      <span className="text-term-gray">--media</span>
+                    </label>
 
                     {hasMedia && (
                       <motion.div
@@ -245,42 +324,16 @@ export default function Home() {
                         {mediaType === 'video' && (
                           <input
                             type="number"
-                            placeholder="sec"
+                            placeholder="duration_ms"
                             value={videoDuration ? videoDuration / 1000 : ''}
                             onChange={(e) => setVideoDuration(parseFloat(e.target.value) * 1000 || undefined)}
-                            className="terminal-input w-16 py-1 px-2 text-xs"
+                            className="terminal-input w-20 py-1 px-2 text-xs"
                             min="1"
                             max="600"
                           />
                         )}
                       </motion.div>
                     )}
-                  </div>
-
-                  {/* Content Type Selector */}
-                  <div>
-                    <Tooltip content={TOOLTIPS.contentType}>
-                      <label className="block text-[10px] text-term-cyan mb-1.5 font-mono uppercase cursor-help">
-                        content_type
-                      </label>
-                    </Tooltip>
-                    <div className="flex flex-wrap gap-1.5">
-                      {CONTENT_TYPES.map((type) => (
-                        <Tooltip key={type.value} content={type.description}>
-                          <button
-                            type="button"
-                            onClick={() => setContentType(type.value)}
-                            className={`text-[10px] px-2 py-1 border rounded font-mono transition-colors ${
-                              contentType === type.value
-                                ? 'bg-term-cyan/20 border-term-cyan text-term-cyan'
-                                : 'bg-term-bg border-term-border text-term-gray hover:text-term-cyan hover:border-term-cyan'
-                            }`}
-                          >
-                            {type.label}
-                          </button>
-                        </Tooltip>
-                      ))}
-                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -299,22 +352,23 @@ export default function Home() {
                   <span className="text-xs text-term-gray ml-2">account_metrics.conf</span>
                 </div>
                 <div className="p-4 space-y-3">
-                  {/* Account Size Templates */}
+                  {/* Account Templates */}
                   <div>
-                    <label className="block text-[10px] text-term-cyan mb-1.5 font-mono uppercase">
-                      account_size_preset
+                    <label className="block text-[10px] text-term-amber mb-1.5 font-mono uppercase" title="Quick presets for different account sizes">
+                      account_templates
                     </label>
                     <div className="flex flex-wrap gap-1.5">
-                      {ACCOUNT_TEMPLATES.map((template) => (
-                        <Tooltip key={template.label} content={template.description}>
-                          <button
-                            type="button"
-                            onClick={() => applyTemplate(template)}
-                            className="text-[10px] px-2 py-1 bg-term-bg border border-term-border rounded text-term-gray hover:text-term-cyan hover:border-term-cyan transition-colors font-mono"
-                          >
-                            {template.label}
-                          </button>
-                        </Tooltip>
+                      {accountTemplates.map((template) => (
+                        <button
+                          key={template.label}
+                          type="button"
+                          onClick={() => applyTemplate(template)}
+                          title={template.tooltip}
+                          className="text-[10px] px-2 py-1 font-mono bg-term-bg border border-term-border text-term-gray hover:border-term-amber hover:text-term-amber transition-colors flex items-center gap-1"
+                        >
+                          <span>{template.icon}</span>
+                          <span>{template.label}</span>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -322,25 +376,22 @@ export default function Home() {
                   {/* Followers/Following */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Tooltip content={TOOLTIPS.followers}>
-                        <label className="block text-[10px] text-term-green mb-1 font-mono uppercase cursor-help">
-                          followers
-                        </label>
-                      </Tooltip>
+                      <label className="block text-[10px] text-term-green mb-1 font-mono uppercase" title="Your total follower count - key metric for reach">
+                        followers
+                      </label>
                       <input
                         type="number"
                         value={followersCount}
                         onChange={(e) => setFollowersCount(parseInt(e.target.value) || 0)}
                         className="terminal-input w-full py-2 text-sm"
                         min="0"
+                        title="Total followers"
                       />
                     </div>
                     <div>
-                      <Tooltip content={TOOLTIPS.following}>
-                        <label className="block text-[10px] text-term-cyan mb-1 font-mono uppercase cursor-help">
-                          following
-                        </label>
-                      </Tooltip>
+                      <label className="block text-[10px] text-term-cyan mb-1 font-mono uppercase" title="Accounts you follow - affects follower quality ratio">
+                        following
+                      </label>
                       <input
                         type="number"
                         value={followingCount}
@@ -353,44 +404,41 @@ export default function Home() {
 
                   {/* Average Engagement */}
                   <div>
-                    <label className="block text-[10px] text-term-amber mb-1 font-mono uppercase">
+                    <label className="block text-[10px] text-term-amber mb-1 font-mono uppercase" title="Average engagement metrics per post - critical for engagement rate">
                       avg_engagement_per_post
                     </label>
                     <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <Tooltip content={TOOLTIPS.likes}>
-                          <div className="text-[10px] text-term-gray mb-1 font-mono cursor-help">likes</div>
-                        </Tooltip>
+                        <div className="text-[10px] text-term-gray mb-1 font-mono" title="Avg likes per post">likes</div>
                         <input
                           type="number"
                           value={avgLikes}
                           onChange={(e) => setAvgLikes(parseFloat(e.target.value) || 0)}
                           className="terminal-input w-full py-1.5 text-sm"
                           min="0"
+                          title="Average likes per post"
                         />
                       </div>
                       <div>
-                        <Tooltip content={TOOLTIPS.replies}>
-                          <div className="text-[10px] text-term-gray mb-1 font-mono cursor-help">replies</div>
-                        </Tooltip>
+                        <div className="text-[10px] text-term-gray mb-1 font-mono" title="Avg replies per post - high value signal">replies</div>
                         <input
                           type="number"
                           value={avgReplies}
                           onChange={(e) => setAvgReplies(parseFloat(e.target.value) || 0)}
                           className="terminal-input w-full py-1.5 text-sm"
                           min="0"
+                          title="Average replies per post"
                         />
                       </div>
                       <div>
-                        <Tooltip content={TOOLTIPS.retweets}>
-                          <div className="text-[10px] text-term-gray mb-1 font-mono cursor-help">retweets</div>
-                        </Tooltip>
+                        <div className="text-[10px] text-term-gray mb-1 font-mono" title="Avg retweets per post - amplification signal">retweets</div>
                         <input
                           type="number"
                           value={avgRetweets}
                           onChange={(e) => setAvgRetweets(parseFloat(e.target.value) || 0)}
                           className="terminal-input w-full py-1.5 text-sm"
                           min="0"
+                          title="Average retweets per post"
                         />
                       </div>
                     </div>
@@ -399,11 +447,9 @@ export default function Home() {
                   {/* Activity & Age */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Tooltip content={TOOLTIPS.postsPerWeek}>
-                        <label className="block text-[10px] text-term-gray mb-1 font-mono uppercase cursor-help">
-                          posts_per_week
-                        </label>
-                      </Tooltip>
+                      <label className="block text-[10px] text-term-gray mb-1 font-mono uppercase" title="Posting frequency - consistency matters (1-5 posts/day optimal)">
+                        posts_per_week
+                      </label>
                       <input
                         type="number"
                         value={postsPerWeek}
@@ -411,20 +457,20 @@ export default function Home() {
                         className="terminal-input w-full py-2 text-sm"
                         min="0"
                         step="0.5"
+                        title="Posts per week (7-35 is typical)"
                       />
                     </div>
                     <div>
-                      <Tooltip content={TOOLTIPS.accountAge}>
-                        <label className="block text-[10px] text-term-gray mb-1 font-mono uppercase cursor-help">
-                          account_age_days
-                        </label>
-                      </Tooltip>
+                      <label className="block text-[10px] text-term-gray mb-1 font-mono uppercase" title="Account age in days - older accounts have more authority">
+                        account_age_days
+                      </label>
                       <input
                         type="number"
                         value={accountAgeDays}
                         onChange={(e) => setAccountAgeDays(parseInt(e.target.value) || 1)}
                         className="terminal-input w-full py-2 text-sm"
                         min="1"
+                        title="Account age in days"
                       />
                     </div>
                   </div>
@@ -432,11 +478,9 @@ export default function Home() {
                   {/* Niche & Verification */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Tooltip content={TOOLTIPS.niche}>
-                        <label className="block text-[10px] text-term-gray mb-1 font-mono uppercase cursor-help">
-                          niche
-                        </label>
-                      </Tooltip>
+                      <label className="block text-[10px] text-term-gray mb-1 font-mono uppercase" title="Content category/niche">
+                        niche
+                      </label>
                       <select
                         value={niche}
                         onChange={(e) => setNiche(e.target.value)}
@@ -454,17 +498,15 @@ export default function Home() {
                       </select>
                     </div>
                     <div className="flex items-end">
-                      <Tooltip content={TOOLTIPS.verified}>
-                        <label className="flex items-center gap-2 cursor-pointer terminal-input w-full py-2">
-                          <input
-                            type="checkbox"
-                            checked={isVerified}
-                            onChange={(e) => setIsVerified(e.target.checked)}
-                            className="w-3 h-3"
-                          />
-                          <span className="text-xs font-mono text-term-gray">--verified</span>
-                        </label>
-                      </Tooltip>
+                      <label className="flex items-center gap-2 cursor-pointer terminal-input w-full py-2">
+                        <input
+                          type="checkbox"
+                          checked={isVerified}
+                          onChange={(e) => setIsVerified(e.target.checked)}
+                          className="w-3 h-3"
+                        />
+                        <span className="text-xs font-mono text-term-gray">--verified</span>
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -501,17 +543,17 @@ export default function Home() {
             {/* Mobile Tabs */}
             {result && (
               <div className="lg:hidden">
-                <div className="flex gap-1 mb-3 overflow-x-auto">
+                <div className="grid grid-cols-2 gap-1.5 mb-3">
                   {[
-                    { id: 'breakdown', label: 'SCORE' },
+                    { id: 'actionables', label: 'ACTIONS' },
+                    { id: 'breakdown', label: 'BREAKDOWN' },
                     { id: 'tips', label: 'TIPS' },
-                    { id: 'diversity', label: 'DIVERSITY' },
-                    { id: 'params', label: 'X_PARAMS' },
+                    { id: 'algorithm', label: 'ALGORITHM' },
                   ].map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                      className={`flex-1 py-1.5 text-[10px] font-mono transition-all whitespace-nowrap ${
+                      className={`py-1.5 text-[10px] font-mono transition-all ${
                         activeTab === tab.id
                           ? 'bg-term-green text-term-bg'
                           : 'bg-term-bg-light text-term-gray border border-term-border hover:border-term-green-dim'
@@ -523,6 +565,15 @@ export default function Home() {
                 </div>
 
                 <AnimatePresence mode="wait">
+                  {activeTab === 'actionables' && (
+                    <motion.div key="actionables" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      <Actionables
+                        postScore={result.post_score}
+                        accountScore={result.account_score}
+                        aggregateScore={result.aggregate_score}
+                      />
+                    </motion.div>
+                  )}
                   {activeTab === 'breakdown' && (
                     <motion.div key="breakdown" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                       <ScoreBreakdown
@@ -539,14 +590,9 @@ export default function Home() {
                       <ImprovementTips tips={result.post_score.improvements} />
                     </motion.div>
                   )}
-                  {activeTab === 'diversity' && result.post_score.diversity && (
-                    <motion.div key="diversity" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      <DiversityScore diversity={result.post_score.diversity} />
-                    </motion.div>
-                  )}
-                  {activeTab === 'params' && (
-                    <motion.div key="params" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      <XAlgorithmParams />
+                  {activeTab === 'algorithm' && (
+                    <motion.div key="algorithm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      <AlgorithmExplainer />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -556,130 +602,118 @@ export default function Home() {
 
           {/* Right Column - Results */}
           <div className="space-y-4">
-            {/* Virality Meter */}
-            <motion.div
-              className="terminal-card"
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-            >
-              {result ? (
-                <>
-                  <div className="terminal-card-header">
+            {result ? (
+              <>
+                {/* Aggregate Score - Main Neonic Box */}
+                <motion.div
+                  className="relative border-2 border-term-cyan bg-gradient-to-br from-term-cyan/5 via-term-bg to-term-cyan/10 shadow-[0_0_30px_rgba(0,212,255,0.3)]"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <div className="terminal-card-header bg-term-cyan/10">
                     <div className="terminal-dot terminal-dot-red" />
                     <div className="terminal-dot terminal-dot-yellow" />
                     <div className="terminal-dot terminal-dot-green" />
-                    <span className="text-xs text-term-gray ml-2">virality_score.exe</span>
+                    <span className="text-xs text-term-cyan ml-2 font-bold">AGGREGATE_SCORE.exe</span>
                   </div>
                   <div className="p-4">
-                    {/* Aggregate Score Display */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <motion.span
-                          className="text-3xl"
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          style={{ color: getTierColor(result.aggregate_tier_color) }}
-                        >
-                          {result.aggregate_tier_emoji}
-                        </motion.span>
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-3 mb-3">
+                        <span className="text-5xl">{result.aggregate_tier_emoji}</span>
                         <div>
-                          <motion.div
-                            className="text-4xl font-mono font-bold"
-                            style={{ color: getTierColor(result.aggregate_tier_color) }}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                          >
+                          <div className="text-5xl font-mono font-bold text-term-cyan">
                             {result.aggregate_score}
-                            <span className="text-lg text-term-gray">/100</span>
-                          </motion.div>
-                          <div className="text-[10px] text-term-gray uppercase">aggregate_score</div>
+                            <span className="text-2xl text-term-gray">/100</span>
+                          </div>
+                          <div className="text-xs text-term-gray uppercase">combined virality</div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div
-                          className="terminal-badge"
-                          style={{
-                            background: `${getTierColor(result.aggregate_tier_color)}15`,
-                            borderColor: `${getTierColor(result.aggregate_tier_color)}40`,
-                            color: getTierColor(result.aggregate_tier_color),
-                          }}
-                        >
-                          TIER_{result.aggregate_tier_level}
-                        </div>
-                        <div className="text-sm font-mono mt-1" style={{ color: getTierColor(result.aggregate_tier_color) }}>
-                          {result.aggregate_tier_name}
-                        </div>
+                      <div className="terminal-badge bg-term-cyan/20 border-term-cyan text-term-cyan">
+                        TIER_{result.aggregate_tier_level}: {result.aggregate_tier_name}
                       </div>
-                    </div>
-
-                    {/* Progress bar */}
-                    <div className="terminal-progress mb-3">
-                      <motion.div
-                        className="terminal-progress-bar"
-                        style={{ backgroundColor: getTierColor(result.aggregate_tier_color) }}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${result.aggregate_score}%` }}
-                        transition={{ duration: 1, ease: 'easeOut' }}
-                      />
-                    </div>
-
-                    <p className="text-xs text-term-gray font-mono mb-4">
-                      &gt; {result.aggregate_tier_description}
-                    </p>
-
-                    {/* Account + Content Score Breakdown */}
-                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-term-border">
-                      <div className="bg-term-bg p-2.5 rounded border border-term-border">
-                        <div className="text-[10px] text-term-gray uppercase mb-1">content_score</div>
-                        <div className="text-xl font-mono font-bold text-term-cyan">
-                          {result.post_score.score}
-                          <span className="text-xs text-term-gray">/100</span>
-                        </div>
-                        <div className="text-[10px] text-term-cyan mt-1">
-                          {result.post_score.tier_emoji} {result.post_score.tier_name}
-                        </div>
-                      </div>
-                      <div className="bg-term-bg p-2.5 rounded border border-term-border">
-                        <div className="text-[10px] text-term-gray uppercase mb-1">account_score</div>
-                        <div className="text-xl font-mono font-bold text-term-amber">
-                          {result.account_score.overall_score}
-                          <span className="text-xs text-term-gray">/100</span>
-                        </div>
-                        <div className="text-[10px] text-term-amber mt-1">
-                          {result.account_score.account_tier_emoji} {result.account_score.account_tier_name}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Niche insight */}
-                    <div className="mt-3 p-2 bg-term-bg border border-term-green/20 rounded">
-                      <div className="text-[10px] text-term-green font-mono">
-                        <span className="text-term-gray">niche:</span> {niche.toUpperCase()} |
-                        <span className="text-term-gray"> reach_multiplier:</span> {result.account_score.projected_reach_multiplier}x |
-                        <span className="text-term-gray"> viral_probability:</span> {Math.round(result.account_score.viral_post_probability * 100)}%
-                      </div>
+                      <p className="text-xs text-gray-300 mt-3 font-mono">
+                        &gt; {result.aggregate_tier_description}
+                      </p>
                     </div>
                   </div>
-                </>
-              ) : (
-                <>
-                  <div className="terminal-card-header">
-                    <div className="terminal-dot terminal-dot-red" />
-                    <div className="terminal-dot terminal-dot-yellow" />
-                    <div className="terminal-dot terminal-dot-green" />
-                    <span className="text-xs text-term-gray ml-2">virality_score.exe</span>
-                  </div>
-                  <div className="p-8 text-center">
-                    <div className="text-term-gray font-mono text-sm">
-                      <span className="text-term-green animate-blink">_</span> Awaiting input...
+                </motion.div>
+
+                {/* Breakdown: Account + Post Scores */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Account Score - Neonic Box */}
+                  <motion.div
+                    className="relative border-2 border-term-green bg-gradient-to-br from-term-green/5 via-term-bg to-term-green/10 shadow-[0_0_20px_rgba(0,255,65,0.2)]"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <div className="terminal-card-header bg-term-green/10">
+                      <div className="terminal-dot terminal-dot-red" />
+                      <div className="terminal-dot terminal-dot-yellow" />
+                      <div className="terminal-dot terminal-dot-green" />
+                      <span className="text-[10px] text-term-green ml-2 font-bold">ACCOUNT</span>
                     </div>
-                    <p className="text-term-gray text-xs font-mono mt-2">
-                      Enter content to analyze virality
-                    </p>
+                    <div className="p-3 text-center">
+                      <div className="text-xl">{result.account_score.account_tier_emoji}</div>
+                      <div className="text-3xl font-mono font-bold text-term-green">
+                        {result.account_score.overall_score}
+                      </div>
+                      <div className="text-[10px] text-term-gray uppercase">account_score</div>
+                      <div className="mt-2 text-[10px] bg-term-green/10 border border-term-green/30 px-2 py-1 text-term-green font-mono">
+                        T{result.account_score.account_tier}
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* Post Score - Neonic Box */}
+                  <motion.div
+                    className="relative border-2 border-term-amber bg-gradient-to-br from-term-amber/5 via-term-bg to-term-amber/10 shadow-[0_0_20px_rgba(255,176,0,0.2)]"
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <div className="terminal-card-header bg-term-amber/10">
+                      <div className="terminal-dot terminal-dot-red" />
+                      <div className="terminal-dot terminal-dot-yellow" />
+                      <div className="terminal-dot terminal-dot-green" />
+                      <span className="text-[10px] text-term-amber ml-2 font-bold">POST</span>
+                    </div>
+                    <div className="p-3 text-center">
+                      <div className="text-xl">{result.post_score.tier_emoji}</div>
+                      <div className="text-3xl font-mono font-bold text-term-amber">
+                        {result.post_score.score}
+                      </div>
+                      <div className="text-[10px] text-term-gray uppercase">post_score</div>
+                      <div className="mt-2 text-[10px] bg-term-amber/10 border border-term-amber/30 px-2 py-1 text-term-amber font-mono">
+                        T{result.post_score.tier_level}
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+              </>
+            ) : (
+              <motion.div
+                className="terminal-card"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+              >
+                <div className="terminal-card-header">
+                  <div className="terminal-dot terminal-dot-red" />
+                  <div className="terminal-dot terminal-dot-yellow" />
+                  <div className="terminal-dot terminal-dot-green" />
+                  <span className="text-xs text-term-gray ml-2">virality_score.exe</span>
+                </div>
+                <div className="p-8 text-center">
+                  <div className="text-term-gray font-mono text-sm">
+                    <span className="text-term-green animate-blink">_</span> Awaiting input...
                   </div>
-                </>
-              )}
-            </motion.div>
+                  <p className="text-term-gray text-xs font-mono mt-2">
+                    Enter content to analyze virality
+                  </p>
+                </div>
+              </motion.div>
+            )}
 
             {/* Content Stats */}
             {result && (
@@ -696,10 +730,26 @@ export default function Home() {
                 </div>
                 <div className="p-3">
                   <div className="grid grid-cols-4 gap-2 text-center mb-3">
-                    <StatCell label="chars" value={result.post_score.content_stats.char_count} tooltip="Character count" />
-                    <StatCell label="words" value={result.post_score.content_stats.word_count} tooltip="Word count" />
-                    <StatCell label="tags" value={result.post_score.content_stats.hashtag_count} tooltip="Hashtag count (1-2 optimal)" />
-                    <StatCell label="hooks" value={result.post_score.content_stats.viral_hooks} tooltip="Viral hook patterns detected" />
+                    <StatCell label="chars" value={result.post_score.content_stats.char_count} />
+                    <StatCell label="words" value={result.post_score.content_stats.word_count} />
+                    <StatCell label="tags" value={result.post_score.content_stats.hashtag_count} />
+                    <StatCell label="hooks" value={result.post_score.content_stats.viral_hooks} />
+                  </div>
+                  <div className="mb-3 p-2 bg-term-bg border border-term-cyan/30">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-term-cyan font-mono uppercase" title="Content diversity based on X algorithm - variety increases distribution">
+                        diversity_score
+                      </span>
+                      <span className="text-sm font-mono font-bold text-term-cyan">
+                        {(result.post_score.content_stats.diversity_score * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="mt-1 h-1 bg-term-bg-light rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-term-cyan transition-all duration-500"
+                        style={{ width: `${result.post_score.content_stats.diversity_score * 100}%` }}
+                      />
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {result.post_score.content_stats.has_question && (
@@ -720,9 +770,92 @@ export default function Home() {
               </motion.div>
             )}
 
+            {/* X Algorithm Parameters Box */}
+            {result && (
+              <motion.div
+                className="terminal-card border-2 border-term-cyan/30"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <div className="terminal-card-header bg-term-cyan/10">
+                  <div className="terminal-dot terminal-dot-red" />
+                  <div className="terminal-dot terminal-dot-yellow" />
+                  <div className="terminal-dot terminal-dot-green" />
+                  <span className="text-xs text-term-cyan ml-2 font-bold">X_ALGORITHM_PARAMS.rs</span>
+                </div>
+                <div className="p-3 space-y-3">
+                  <div className="text-xs text-term-gray font-mono">
+                    <span className="text-term-green">$</span> cat phoenix_scorer.rs
+                  </div>
+
+                  {/* Positive Signals */}
+                  <div>
+                    <div className="text-[10px] text-term-green uppercase mb-1.5 font-mono">
+                      // POSITIVE SIGNALS (boost)
+                    </div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {ALGORITHM_SIGNALS.positive.map((signal) => (
+                        <div
+                          key={signal.key}
+                          className="flex items-center gap-1.5 text-[10px] font-mono"
+                          title={signal.description}
+                        >
+                          <span className="text-term-green">+</span>
+                          <span className="text-term-gray">{signal.label}</span>
+                          <span className={`ml-auto ${
+                            signal.weight === 'HIGH' ? 'text-term-green' :
+                            signal.weight === 'MEDIUM' ? 'text-term-amber' : 'text-term-gray'
+                          }`}>
+                            {signal.weight}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Negative Signals */}
+                  <div>
+                    <div className="text-[10px] text-term-red uppercase mb-1.5 font-mono">
+                      // NEGATIVE SIGNALS (penalty)
+                    </div>
+                    <div className="space-y-0.5">
+                      {ALGORITHM_SIGNALS.negative.map((signal) => (
+                        <div
+                          key={signal.key}
+                          className="flex items-center gap-1.5 text-[10px] font-mono"
+                          title={signal.description}
+                        >
+                          <span className="text-term-red">-</span>
+                          <span className="text-term-gray">{signal.label}</span>
+                          <span className="text-term-red ml-auto">{signal.weight}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="text-[10px] text-term-gray pt-2 border-t border-term-border font-mono">
+                    Source: <a
+                      href="https://github.com/AbdelStark/x-algorithm"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-term-cyan hover:underline"
+                    >
+                      github.com/AbdelStark/x-algorithm
+                    </a>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {/* Desktop: Full breakdown */}
             {result && (
               <div className="hidden lg:block space-y-4">
+                <Actionables
+                  postScore={result.post_score}
+                  accountScore={result.account_score}
+                  aggregateScore={result.aggregate_score}
+                />
                 <ScoreBreakdown
                   signalScores={result.post_score.signal_scores}
                   engagementPotential={result.post_score.engagement_potential}
@@ -730,16 +863,8 @@ export default function Home() {
                   controversyRisk={result.post_score.controversy_risk}
                   negativeRisk={result.post_score.negative_signal_risk}
                 />
-                {result.post_score.diversity && <DiversityScore diversity={result.post_score.diversity} />}
                 <ImprovementTips tips={result.post_score.improvements} />
-                <XAlgorithmParams />
-              </div>
-            )}
-
-            {/* Show X Algorithm Params even without results */}
-            {!result && (
-              <div className="hidden lg:block">
-                <XAlgorithmParams />
+                <AlgorithmExplainer />
               </div>
             )}
           </div>
@@ -748,14 +873,14 @@ export default function Home() {
         {/* Footer */}
         <footer className="mt-12 pt-6 border-t border-term-border text-center">
           <p className="text-term-gray text-xs font-mono">
-            Built by{' '}
+            X Algorithm Analysis powered by{' '}
             <a
-              href="https://x.com/Eli5defi"
+              href="https://github.com/AbdelStark/x-algorithm"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-term-cyan hover:underline"
+              className="text-term-green hover:underline"
             >
-              @Eli5defi
+              AbdelStark/x-algorithm
             </a>
           </p>
         </footer>
@@ -764,16 +889,11 @@ export default function Home() {
   );
 }
 
-function StatCell({ label, value, tooltip }: { label: string; value: number | string; tooltip?: string }) {
-  const content = (
+function StatCell({ label, value }: { label: string; value: number | string }) {
+  return (
     <div>
       <div className="text-sm font-mono font-bold text-term-green">{value}</div>
       <div className="text-[10px] text-term-gray uppercase font-mono">{label}</div>
     </div>
   );
-
-  if (tooltip) {
-    return <Tooltip content={tooltip}>{content}</Tooltip>;
-  }
-  return content;
 }

@@ -94,6 +94,7 @@ async def analyze_content(request: ContentAnalysisRequest):
                 "has_cta": features.has_cta,
                 "emotional_tone": features.emotional_tone,
                 "viral_hooks": features.viral_hook_count,
+                "diversity_score": features.diversity_score,
             },
         )
 
@@ -318,6 +319,7 @@ async def analyze_combined(request: CombinedAnalysisRequest):
                 "has_cta": features.has_cta,
                 "emotional_tone": features.emotional_tone,
                 "viral_hooks": features.viral_hook_count,
+                "diversity_score": features.diversity_score,
             },
         )
 
