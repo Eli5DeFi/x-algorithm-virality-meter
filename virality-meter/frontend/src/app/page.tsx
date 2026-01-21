@@ -2,10 +2,9 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 import ViralityMeter from '@/components/ViralityMeter';
 import ScoreBreakdown from '@/components/ScoreBreakdown';
-import ImprovementTips from '@/components/ImprovementTips';
-import AlgorithmExplainer from '@/components/AlgorithmExplainer';
 import Actionables from '@/components/Actionables';
 import DisclaimerBanner from '@/components/DisclaimerBanner';
 import { analyzeCombined, CombinedAnalysisResponse } from '@/lib/api';
@@ -16,7 +15,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analyzedContent, setAnalyzedContent] = useState('');
-  const [activeTab, setActiveTab] = useState<'breakdown' | 'tips' | 'actionables' | 'algorithm'>('breakdown');
+  const [activeTab, setActiveTab] = useState<'breakdown' | 'actionables'>('breakdown');
 
   // Form state - Content
   const [content, setContent] = useState('');
@@ -177,6 +176,13 @@ export default function Home() {
               </p>
             </div>
           </div>
+          <Link
+            href="/algorithm"
+            className="text-[10px] text-term-cyan hover:text-term-green font-mono flex items-center gap-1 transition-colors"
+          >
+            <span>[?]</span>
+            <span>X_ALGORITHM_DOCS</span>
+          </Link>
         </div>
       </header>
 
@@ -258,8 +264,8 @@ export default function Home() {
                           onClick={() => setContentType(type.value as typeof contentType)}
                           title={type.tooltip}
                           className={`text-[10px] px-2 py-1 font-mono transition-colors ${contentType === type.value
-                              ? 'bg-term-cyan text-term-bg'
-                              : 'bg-term-bg border border-term-border text-term-gray hover:border-term-cyan'
+                            ? 'bg-term-cyan text-term-bg'
+                            : 'bg-term-bg border border-term-border text-term-gray hover:border-term-cyan'
                             }`}
                         >
                           {type.label}
@@ -544,15 +550,13 @@ export default function Home() {
                   {[
                     { id: 'actionables', label: 'ACTIONS' },
                     { id: 'breakdown', label: 'BREAKDOWN' },
-                    { id: 'tips', label: 'TIPS' },
-                    { id: 'algorithm', label: 'ALGORITHM' },
                   ].map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as typeof activeTab)}
                       className={`py-1.5 text-[10px] font-mono transition-all ${activeTab === tab.id
-                          ? 'bg-term-green text-term-bg'
-                          : 'bg-term-bg-light text-term-gray border border-term-border hover:border-term-green-dim'
+                        ? 'bg-term-green text-term-bg'
+                        : 'bg-term-bg-light text-term-gray border border-term-border hover:border-term-green-dim'
                         }`}
                     >
                       {tab.label}
@@ -581,14 +585,15 @@ export default function Home() {
                       />
                     </motion.div>
                   )}
-                  {activeTab === 'tips' && (
-                    <motion.div key="tips" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      <ImprovementTips tips={result.post_score.improvements} />
-                    </motion.div>
-                  )}
-                  {activeTab === 'algorithm' && (
-                    <motion.div key="algorithm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      <AlgorithmExplainer />
+                  {activeTab === 'breakdown' && (
+                    <motion.div key="breakdown" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      <ScoreBreakdown
+                        signalScores={result.post_score.signal_scores}
+                        engagementPotential={result.post_score.engagement_potential}
+                        shareability={result.post_score.shareability}
+                        controversyRisk={result.post_score.controversy_risk}
+                        negativeRisk={result.post_score.negative_signal_risk}
+                      />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -659,6 +664,9 @@ export default function Home() {
                       <div className="mt-2 text-[10px] bg-term-green/10 border border-term-green/30 px-2 py-1 text-term-green font-mono">
                         T{result.account_score.account_tier}
                       </div>
+                      <div className="text-[10px] text-gray-500 mt-2 font-mono">
+                        {VIRALITY_TIERS.find(t => t.level === result.account_score.account_tier)?.description}
+                      </div>
                     </div>
                   </motion.div>
 
@@ -683,6 +691,9 @@ export default function Home() {
                       <div className="text-[10px] text-term-gray uppercase">post_score</div>
                       <div className="mt-2 text-[10px] bg-term-amber/10 border border-term-amber/30 px-2 py-1 text-term-amber font-mono">
                         T{result.post_score.tier_level}
+                      </div>
+                      <div className="text-[10px] text-gray-500 mt-2 font-mono">
+                        {result.post_score.tier_description}
                       </div>
                     </div>
                   </motion.div>
@@ -731,22 +742,7 @@ export default function Home() {
                     <StatCell label="tags" value={result.post_score.content_stats.hashtag_count} />
                     <StatCell label="hooks" value={result.post_score.content_stats.viral_hooks} />
                   </div>
-                  <div className="mb-3 p-2 bg-term-bg border border-term-cyan/30">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-term-cyan font-mono uppercase" title="Content diversity based on X algorithm - variety increases distribution">
-                        diversity_score
-                      </span>
-                      <span className="text-sm font-mono font-bold text-term-cyan">
-                        {((result.post_score.diversity?.diversity_score || 0) * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                    <div className="mt-1 h-1 bg-term-bg-light rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-term-cyan transition-all duration-500"
-                        style={{ width: `${(result.post_score.diversity?.diversity_score || 0) * 100}%` }}
-                      />
-                    </div>
-                  </div>
+
                   <div className="flex flex-wrap gap-1.5">
                     {result.post_score.content_stats.has_question && (
                       <span className="text-[10px] bg-term-bg border border-term-green-dim text-term-green px-2 py-0.5 font-mono">
@@ -800,7 +796,7 @@ export default function Home() {
                           <span className="text-term-green">+</span>
                           <span className="text-term-gray">{signal.label}</span>
                           <span className={`ml-auto ${signal.weight === 'HIGH' ? 'text-term-green' :
-                              signal.weight === 'MEDIUM' ? 'text-term-amber' : 'text-term-gray'
+                            signal.weight === 'MEDIUM' ? 'text-term-amber' : 'text-term-gray'
                             }`}>
                             {signal.weight}
                           </span>
@@ -858,8 +854,7 @@ export default function Home() {
                   controversyRisk={result.post_score.controversy_risk}
                   negativeRisk={result.post_score.negative_signal_risk}
                 />
-                <ImprovementTips tips={result.post_score.improvements} />
-                <AlgorithmExplainer />
+
               </div>
             )}
           </div>
