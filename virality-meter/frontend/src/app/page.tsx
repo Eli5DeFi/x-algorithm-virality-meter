@@ -263,24 +263,14 @@ export default function Home() {
         {/* Footer */}
         <footer className="mt-12 pt-6 border-t border-term-border text-center">
           <p className="text-term-gray text-xs font-mono">
-            Built with{' '}
+            Based on{' '}
             <a
               href="https://github.com/AbdelStark/x-algorithm"
               target="_blank"
               rel="noopener noreferrer"
               className="text-term-green hover:underline"
             >
-              X Algorithm
-            </a>
-            {' | '}
-            Grok AI via{' '}
-            <a
-              href="https://puter.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-term-cyan hover:underline"
-            >
-              Puter.js
+              AbdelStark/x-algorithm
             </a>
           </p>
         </footer>
