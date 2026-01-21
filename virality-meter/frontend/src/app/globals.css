@@ -37,11 +37,45 @@ body {
   background: var(--terminal-green-dim);
 }
 
-/* Terminal card */
+/* Terminal card with neon hover */
 .terminal-card {
   background: var(--terminal-bg-light);
   border: 1px solid var(--terminal-border);
   border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.terminal-card:hover {
+  border-color: rgba(0, 255, 65, 0.4);
+  box-shadow:
+    0 0 10px rgba(0, 255, 65, 0.1),
+    0 0 20px rgba(0, 255, 65, 0.05),
+    inset 0 0 30px rgba(0, 255, 65, 0.02);
+}
+
+/* Neon hover variants */
+.terminal-card-cyan:hover {
+  border-color: rgba(0, 212, 255, 0.4);
+  box-shadow:
+    0 0 10px rgba(0, 212, 255, 0.1),
+    0 0 20px rgba(0, 212, 255, 0.05),
+    inset 0 0 30px rgba(0, 212, 255, 0.02);
+}
+
+.terminal-card-amber:hover {
+  border-color: rgba(255, 176, 0, 0.4);
+  box-shadow:
+    0 0 10px rgba(255, 176, 0, 0.1),
+    0 0 20px rgba(255, 176, 0, 0.05),
+    inset 0 0 30px rgba(255, 176, 0, 0.02);
+}
+
+.terminal-card-red:hover {
+  border-color: rgba(255, 51, 51, 0.4);
+  box-shadow:
+    0 0 10px rgba(255, 51, 51, 0.1),
+    0 0 20px rgba(255, 51, 51, 0.05),
+    inset 0 0 30px rgba(255, 51, 51, 0.02);
 }
 
 .terminal-card-header {

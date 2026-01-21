@@ -11,9 +11,24 @@ export interface SignalScore {
 export interface ImprovementTip {
   signal: string;
   tip: string;
+  action?: string;  // Specific action to take
+  example?: string; // Concrete example
   impact: string;
   priority: 'high' | 'medium' | 'low';
   emoji: string;
+}
+
+export interface DiversityFactor {
+  score: number;
+  description: string;
+  [key: string]: unknown; // Additional fields per factor
+}
+
+export interface DiversityScore {
+  diversity_score: number;
+  diversity_tier: string;
+  tier_description: string;
+  factors: Record<string, DiversityFactor>;
 }
 
 export interface ContentAnalysisResponse {
@@ -28,6 +43,7 @@ export interface ContentAnalysisResponse {
   shareability: number;
   controversy_risk: number;
   negative_signal_risk: number;
+  diversity?: DiversityScore;
   improvements: ImprovementTip[];
   content_stats: {
     char_count: number;

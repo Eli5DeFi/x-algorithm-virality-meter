@@ -1,5 +1,8 @@
 import { ContentAnalysisResponse, AccountSimulationResponse, GrokAssessment } from './types';
 
+// Re-export types for convenience
+export type { ContentAnalysisResponse, AccountSimulationResponse, GrokAssessment };
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export interface CombinedAnalysisParams {

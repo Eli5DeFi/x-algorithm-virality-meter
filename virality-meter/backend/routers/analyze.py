@@ -8,6 +8,7 @@ from models.schemas import (
     ContentAnalysisResponse,
     SignalScore,
     ImprovementTip,
+    DiversityScore,
     AccountSimulationRequest,
     AccountSimulationResponse,
     CombinedAnalysisRequest,
@@ -45,6 +46,15 @@ async def analyze_content(request: ContentAnalysisRequest):
         # Generate improvements
         improvements = scorer.generate_improvements(features, signals)
 
+        # Calculate diversity score
+        diversity_data = scorer.calculate_diversity_score(features)
+        diversity = DiversityScore(
+            diversity_score=diversity_data["diversity_score"],
+            diversity_tier=diversity_data["diversity_tier"],
+            tier_description=diversity_data["tier_description"],
+            factors=diversity_data["factors"],
+        )
+
         # Build response
         signal_scores = [
             SignalScore(
@@ -73,6 +83,7 @@ async def analyze_content(request: ContentAnalysisRequest):
             shareability=round(breakdown["shareability"], 3),
             controversy_risk=round(breakdown["controversy_risk"], 3),
             negative_signal_risk=round(breakdown["negative_signal_risk"], 3),
+            diversity=diversity,
             improvements=improvement_tips,
             content_stats={
                 "char_count": features.char_count,
@@ -276,6 +287,15 @@ async def analyze_combined(request: CombinedAnalysisRequest):
 
         improvement_tips = [ImprovementTip(**tip) for tip in improvements]
 
+        # Calculate diversity score for combined analysis
+        diversity_data = scorer.calculate_diversity_score(features)
+        diversity = DiversityScore(
+            diversity_score=diversity_data["diversity_score"],
+            diversity_tier=diversity_data["diversity_tier"],
+            tier_description=diversity_data["tier_description"],
+            factors=diversity_data["factors"],
+        )
+
         post_score = ContentAnalysisResponse(
             score=adjusted_post_score,
             tier_level=post_tier.level,
@@ -288,6 +308,7 @@ async def analyze_combined(request: CombinedAnalysisRequest):
             shareability=round(breakdown["shareability"], 3),
             controversy_risk=round(breakdown["controversy_risk"], 3),
             negative_signal_risk=round(breakdown["negative_signal_risk"], 3),
+            diversity=diversity,
             improvements=improvement_tips,
             content_stats={
                 "char_count": features.char_count,
