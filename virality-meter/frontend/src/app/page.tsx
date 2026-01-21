@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ScoreBreakdown from '@/components/ScoreBreakdown';
 import ImprovementTips from '@/components/ImprovementTips';
-import GrokAssessment from '@/components/GrokAssessment';
 import XAlgorithmParams from '@/components/XAlgorithmParams';
 import DiversityScore from '@/components/DiversityScore';
 import Tooltip from '@/components/Tooltip';
@@ -40,14 +39,23 @@ export default function Home() {
   const [result, setResult] = useState<ContentAnalysisResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [analyzedContent, setAnalyzedContent] = useState('');
-  const [activeTab, setActiveTab] = useState<'breakdown' | 'tips' | 'diversity' | 'grok' | 'params'>('breakdown');
+  const [activeTab, setActiveTab] = useState<'breakdown' | 'tips' | 'diversity' | 'params'>('breakdown');
 
   // Form state - Content
   const [content, setContent] = useState('');
+  const [contentType, setContentType] = useState('short');
   const [hasMedia, setHasMedia] = useState(false);
   const [mediaType, setMediaType] = useState('none');
   const [videoDuration, setVideoDuration] = useState<number | undefined>();
+
+  // Content type options
+  const CONTENT_TYPES = [
+    { value: 'short', label: 'Short Tweet', description: 'Standard tweet under 280 chars' },
+    { value: 'thread', label: 'Thread', description: 'Multi-tweet thread (1/, 2/, etc.)' },
+    { value: 'longform', label: 'Long Form', description: 'Extended post over 280 chars' },
+    { value: 'quote', label: 'Quote RT', description: 'Quote retweet with commentary' },
+    { value: 'article', label: 'Article', description: 'X article or long-form note' },
+  ];
 
   // Form state - Account
   const [followersCount, setFollowersCount] = useState(1000);
@@ -66,7 +74,6 @@ export default function Home() {
 
     setLoading(true);
     setError(null);
-    setAnalyzedContent(content);
 
     try {
       const response = await analyzeContent(content, hasMedia, mediaType, videoDuration);
@@ -233,6 +240,32 @@ export default function Home() {
                         )}
                       </motion.div>
                     )}
+                  </div>
+
+                  {/* Content Type Selector */}
+                  <div>
+                    <Tooltip content={TOOLTIPS.contentType}>
+                      <label className="block text-[10px] text-term-cyan mb-1.5 font-mono uppercase cursor-help">
+                        content_type
+                      </label>
+                    </Tooltip>
+                    <div className="flex flex-wrap gap-1.5">
+                      {CONTENT_TYPES.map((type) => (
+                        <Tooltip key={type.value} content={type.description}>
+                          <button
+                            type="button"
+                            onClick={() => setContentType(type.value)}
+                            className={`text-[10px] px-2 py-1 border rounded font-mono transition-colors ${
+                              contentType === type.value
+                                ? 'bg-term-cyan/20 border-term-cyan text-term-cyan'
+                                : 'bg-term-bg border-term-border text-term-gray hover:text-term-cyan hover:border-term-cyan'
+                            }`}
+                          >
+                            {type.label}
+                          </button>
+                        </Tooltip>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -458,7 +491,6 @@ export default function Home() {
                     { id: 'breakdown', label: 'SCORE' },
                     { id: 'tips', label: 'TIPS' },
                     { id: 'diversity', label: 'DIVERSITY' },
-                    { id: 'grok', label: 'GROK' },
                     { id: 'params', label: 'X_PARAMS' },
                   ].map((tab) => (
                     <button
@@ -495,11 +527,6 @@ export default function Home() {
                   {activeTab === 'diversity' && result.diversity && (
                     <motion.div key="diversity" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                       <DiversityScore diversity={result.diversity} />
-                    </motion.div>
-                  )}
-                  {activeTab === 'grok' && (
-                    <motion.div key="grok" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      <GrokAssessment content={analyzedContent} />
                     </motion.div>
                   )}
                   {activeTab === 'params' && (
@@ -656,7 +683,6 @@ export default function Home() {
                 />
                 {result.diversity && <DiversityScore diversity={result.diversity} />}
                 <ImprovementTips tips={result.improvements} />
-                <GrokAssessment content={analyzedContent} />
                 <XAlgorithmParams />
               </div>
             )}
