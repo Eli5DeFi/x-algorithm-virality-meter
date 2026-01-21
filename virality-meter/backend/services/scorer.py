@@ -473,6 +473,161 @@ class ViralityScorer:
 
         return min(max(score, 0.1), 0.9)
 
+    def calculate_diversity_score(self, features: ContentFeatures) -> Dict[str, Any]:
+        """
+        Calculate content diversity score based on X's author_diversity_scorer.rs
+
+        Diversity factors measure how varied and interesting your content is:
+        - Content type diversity (text, media, threads, questions)
+        - Engagement pattern diversity (likes vs replies vs retweets)
+        - Topic/niche diversity signals
+        - Formatting diversity (emojis, line breaks, structure)
+        """
+        diversity_factors = {}
+        total_score = 0.0
+
+        # 1. Format diversity (text structure variety)
+        format_diversity = 0.0
+        format_elements = 0
+
+        if features.has_question:
+            format_elements += 1
+            format_diversity += 0.15
+        if features.has_cta:
+            format_elements += 1
+            format_diversity += 0.10
+        if features.hashtag_count > 0:
+            format_elements += 1
+            format_diversity += 0.10
+        if features.mention_count > 0:
+            format_elements += 1
+            format_diversity += 0.10
+        if features.emoji_count > 0:
+            format_elements += 1
+            format_diversity += 0.10
+        if features.url_count > 0:
+            format_elements += 1
+            format_diversity += 0.10
+        if features.line_count > 2:  # Multi-line content
+            format_elements += 1
+            format_diversity += 0.15
+        if features.has_media:
+            format_elements += 1
+            format_diversity += 0.20
+
+        diversity_factors["format_diversity"] = {
+            "score": min(format_diversity, 1.0),
+            "elements_used": format_elements,
+            "description": "Variety of content elements used (media, hashtags, mentions, etc.)"
+        }
+        total_score += format_diversity * 0.25
+
+        # 2. Length diversity (optimal for different attention spans)
+        length_score = 0.0
+        if 100 <= features.char_count <= 200:
+            length_score = 1.0  # Sweet spot
+        elif 50 <= features.char_count < 100:
+            length_score = 0.7  # Quick punchy posts
+        elif 200 < features.char_count <= 280:
+            length_score = 0.9  # Standard tweets
+        elif 280 < features.char_count <= 500:
+            length_score = 0.6  # Longer form
+        elif features.char_count > 500:
+            length_score = 0.4  # Very long (better as thread)
+        else:
+            length_score = 0.3  # Too short
+
+        diversity_factors["length_optimization"] = {
+            "score": length_score,
+            "char_count": features.char_count,
+            "description": "How well content length matches optimal engagement patterns"
+        }
+        total_score += length_score * 0.15
+
+        # 3. Engagement bait diversity (driving different types of engagement)
+        engagement_diversity = 0.0
+        engagement_drivers = []
+
+        # Reply drivers
+        if features.has_question or features.controversy_score > 0.3:
+            engagement_diversity += 0.25
+            engagement_drivers.append("reply_driver")
+
+        # Like drivers
+        if features.emotional_intensity > 0.3 or features.has_media:
+            engagement_diversity += 0.25
+            engagement_drivers.append("like_driver")
+
+        # Retweet drivers
+        if features.viral_hook_count > 0 or features.has_cta:
+            engagement_diversity += 0.25
+            engagement_drivers.append("share_driver")
+
+        # Quote drivers
+        if features.controversy_score > 0.2:
+            engagement_diversity += 0.25
+            engagement_drivers.append("quote_driver")
+
+        diversity_factors["engagement_diversity"] = {
+            "score": min(engagement_diversity, 1.0),
+            "drivers": engagement_drivers,
+            "description": "Ability to drive multiple engagement types (likes, replies, RTs, quotes)"
+        }
+        total_score += engagement_diversity * 0.30
+
+        # 4. Topic richness (trending + emotional + viral hooks)
+        topic_richness = 0.0
+
+        topic_richness += features.trending_alignment * 0.4
+        topic_richness += features.emotional_intensity * 0.3
+        topic_richness += min(features.viral_hook_count * 0.15, 0.3)
+
+        diversity_factors["topic_richness"] = {
+            "score": min(topic_richness, 1.0),
+            "trending_alignment": features.trending_alignment,
+            "emotional_intensity": features.emotional_intensity,
+            "description": "Alignment with trending topics and emotional resonance"
+        }
+        total_score += topic_richness * 0.20
+
+        # 5. Uniqueness penalty (deboost patterns reduce diversity)
+        deboost_risk = self._analyze_deboost_risk(features.content)
+        uniqueness_score = 1.0 - deboost_risk
+
+        diversity_factors["uniqueness"] = {
+            "score": uniqueness_score,
+            "spam_risk": deboost_risk,
+            "description": "How unique/original vs spammy/templated the content appears"
+        }
+        total_score += uniqueness_score * 0.10
+
+        # Calculate final diversity score (0-100)
+        final_diversity_score = int(min(total_score * 100, 100))
+
+        # Determine diversity tier
+        if final_diversity_score >= 80:
+            diversity_tier = "HIGHLY_DIVERSE"
+            tier_description = "Excellent content variety - algorithm will favor distribution"
+        elif final_diversity_score >= 60:
+            diversity_tier = "WELL_BALANCED"
+            tier_description = "Good content balance - solid engagement potential"
+        elif final_diversity_score >= 40:
+            diversity_tier = "MODERATE"
+            tier_description = "Some variety present - consider adding more elements"
+        elif final_diversity_score >= 20:
+            diversity_tier = "LIMITED"
+            tier_description = "Low diversity - content may feel repetitive"
+        else:
+            diversity_tier = "MONOTONE"
+            tier_description = "Very limited variety - high risk of reduced reach"
+
+        return {
+            "diversity_score": final_diversity_score,
+            "diversity_tier": diversity_tier,
+            "tier_description": tier_description,
+            "factors": diversity_factors
+        }
+
     def calculate_final_score(self, signals: Dict[str, Dict]) -> Tuple[int, Dict]:
         """
         Calculate final virality score (0-100) using weighted combination.
@@ -518,14 +673,16 @@ class ViralityScorer:
 
     def generate_improvements(self, features: ContentFeatures,
                              signals: Dict[str, Dict]) -> List[Dict]:
-        """Generate actionable improvement tips"""
+        """Generate actionable improvement tips with specific examples"""
         tips = []
 
         # Check for missing question
         if not features.has_question and signals["reply"]["score"] < 0.6:
             tips.append({
                 "signal": "reply",
-                "tip": "Add a question to spark conversation",
+                "tip": "Add a question to spark replies",
+                "action": "End with: 'What's your take?' or 'Anyone else experience this?' or 'Thoughts?'",
+                "example": "→ 'The best time to post is 9am EST. Agree or disagree?'",
                 "impact": "+15-20%",
                 "priority": "high",
                 "emoji": "❓"
@@ -535,7 +692,9 @@ class ViralityScorer:
         if not features.has_media:
             tips.append({
                 "signal": "favorite",
-                "tip": "Add an image or video - visual content gets 2x engagement",
+                "tip": "Add visual content for 2x engagement",
+                "action": "Attach an image, screenshot, meme, or short video clip",
+                "example": "→ Screenshots of tweets, charts, behind-the-scenes photos work best",
                 "impact": "+25-40%",
                 "priority": "high",
                 "emoji": "🖼️"
@@ -545,7 +704,9 @@ class ViralityScorer:
         if features.viral_hook_count == 0:
             tips.append({
                 "signal": "retweet",
-                "tip": "Start with a hook: 'Thread:', 'Hot take:', or 'Nobody talks about...'",
+                "tip": "Open with a viral hook",
+                "action": "Start with: 'Thread:', 'Hot take:', 'POV:', 'Nobody talks about...'",
+                "example": "→ 'Unpopular opinion: [your take]' or '1/ Here's why...'",
                 "impact": "+10-15%",
                 "priority": "medium",
                 "emoji": "🪝"
@@ -555,7 +716,9 @@ class ViralityScorer:
         if features.char_count < 80:
             tips.append({
                 "signal": "dwell_time",
-                "tip": "Add more context - posts under 80 chars feel incomplete",
+                "tip": "Expand your post for better engagement",
+                "action": "Add context, reasoning, or a personal angle to reach 100-200 chars",
+                "example": "→ Instead of 'AI is changing everything' try 'AI is changing everything. I spent 3 hours on a task that now takes 10 minutes. Here's how...'",
                 "impact": "+8-12%",
                 "priority": "medium",
                 "emoji": "📝"
@@ -563,7 +726,9 @@ class ViralityScorer:
         elif features.char_count > 400:
             tips.append({
                 "signal": "favorite",
-                "tip": "Consider splitting into a thread - walls of text get skipped",
+                "tip": "Break into a numbered thread",
+                "action": "Split into 3-5 tweets with '1/', '2/', '3/' format",
+                "example": "→ First tweet hooks, subsequent tweets deliver value. End with a CTA to follow.",
                 "impact": "+10-15%",
                 "priority": "medium",
                 "emoji": "🧵"
@@ -573,7 +738,9 @@ class ViralityScorer:
         if features.hashtag_count > 3:
             tips.append({
                 "signal": "not_interested",
-                "tip": "Reduce hashtags to 1-2 max - more looks spammy",
+                "tip": "Remove excess hashtags",
+                "action": "Keep only 1-2 most relevant hashtags at the end",
+                "example": "→ '#AI #Tech' is fine. '#AI #Tech #Future #Innovation #Startup #Growth' is spam.",
                 "impact": "-15% risk",
                 "priority": "high",
                 "emoji": "🚫"
@@ -581,7 +748,9 @@ class ViralityScorer:
         elif features.hashtag_count == 0 and features.trending_alignment < 0.3:
             tips.append({
                 "signal": "retweet",
-                "tip": "Add 1-2 relevant trending hashtags for discovery",
+                "tip": "Add 1-2 discovery hashtags",
+                "action": "Add relevant trending or niche hashtags at the end",
+                "example": "→ If posting about crypto, add '#Bitcoin' or '#Crypto'. For tech, '#AI' or '#Tech'.",
                 "impact": "+5-10%",
                 "priority": "low",
                 "emoji": "#️⃣"
@@ -591,7 +760,9 @@ class ViralityScorer:
         if not features.has_cta and signals["retweet"]["score"] < 0.5:
             tips.append({
                 "signal": "retweet",
-                "tip": "Add a soft CTA: 'RT if you agree' or 'Drop your thoughts below'",
+                "tip": "Add a call-to-action",
+                "action": "End with a soft CTA that encourages engagement",
+                "example": "→ 'Bookmark this for later' or 'RT to help others' or 'Follow for more'",
                 "impact": "+8-12%",
                 "priority": "medium",
                 "emoji": "📣"
@@ -601,7 +772,9 @@ class ViralityScorer:
         if features.caps_ratio > 0.3:
             tips.append({
                 "signal": "not_interested",
-                "tip": "Ease up on the caps lock - it reads as shouting",
+                "tip": "Reduce ALL CAPS usage",
+                "action": "Use caps sparingly for ONE word emphasis only",
+                "example": "→ 'This is HUGE' ✓ vs 'THIS IS HUGE NEWS EVERYONE' ✗",
                 "impact": "-10% risk",
                 "priority": "high",
                 "emoji": "🔇"
@@ -611,7 +784,9 @@ class ViralityScorer:
         if features.emotional_intensity < 0.2:
             tips.append({
                 "signal": "favorite",
-                "tip": "Add emotional punch - strong opinions get reactions",
+                "tip": "Add emotional language",
+                "action": "Include words that trigger emotion: amazing, terrible, mind-blowing, frustrating",
+                "example": "→ 'New feature released' vs 'This new feature is absolutely game-changing'",
                 "impact": "+10-15%",
                 "priority": "medium",
                 "emoji": "💥"
@@ -621,17 +796,43 @@ class ViralityScorer:
         if features.controversy_score < 0.2 and signals["quote"]["score"] < 0.4:
             tips.append({
                 "signal": "quote",
-                "tip": "Spicier takes get quote tweeted - don't be afraid to be bold",
+                "tip": "Add a contrarian angle",
+                "action": "Challenge conventional wisdom or share an unpopular take",
+                "example": "→ 'Everyone says X but I think Y because...' drives quote tweets",
                 "impact": "+15-25%",
                 "priority": "low",
                 "emoji": "🌶️"
+            })
+
+        # Check for mention usage
+        if features.mention_count == 0 and signals["reply"]["score"] < 0.5:
+            tips.append({
+                "signal": "reply",
+                "tip": "Tag relevant accounts",
+                "action": "Mention 1-2 accounts who'd find this valuable or might engage",
+                "example": "→ Tag the creator you're discussing or someone in your niche",
+                "impact": "+5-10%",
+                "priority": "low",
+                "emoji": "📍"
+            })
+
+        # Check for emoji usage
+        if features.emoji_count == 0 and features.emotional_intensity < 0.3:
+            tips.append({
+                "signal": "click",
+                "tip": "Add 1-2 relevant emojis",
+                "action": "Use emojis to break up text and add visual interest",
+                "example": "→ Lead with an emoji: '🚀 Just launched...' or '💡 Pro tip:...'",
+                "impact": "+3-5%",
+                "priority": "low",
+                "emoji": "✨"
             })
 
         # Sort by priority
         priority_order = {"high": 0, "medium": 1, "low": 2}
         tips.sort(key=lambda x: priority_order.get(x["priority"], 2))
 
-        return tips[:5]  # Return top 5 tips
+        return tips[:6]  # Return top 6 tips
 
 
 # Singleton instance

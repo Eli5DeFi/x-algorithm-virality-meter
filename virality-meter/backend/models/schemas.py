@@ -39,9 +39,25 @@ class ImprovementTip(BaseModel):
     """Suggestion to improve virality"""
     signal: str
     tip: str
+    action: Optional[str] = None  # Specific action to take
+    example: Optional[str] = None  # Concrete example
     impact: str  # e.g., "+12%"
     priority: str  # "high", "medium", "low"
     emoji: str
+
+
+class DiversityFactor(BaseModel):
+    """Individual diversity factor score"""
+    score: float
+    description: str
+
+
+class DiversityScore(BaseModel):
+    """Content diversity assessment"""
+    diversity_score: int = Field(..., ge=0, le=100)
+    diversity_tier: str  # "HIGHLY_DIVERSE", "WELL_BALANCED", "MODERATE", "LIMITED", "MONOTONE"
+    tier_description: str
+    factors: Dict[str, Any]
 
 class ContentAnalysisResponse(BaseModel):
     """Response with virality analysis"""
@@ -61,6 +77,9 @@ class ContentAnalysisResponse(BaseModel):
     shareability: float  # 0-1
     controversy_risk: float  # 0-1
     negative_signal_risk: float  # 0-1
+
+    # Diversity score (from author_diversity_scorer.rs)
+    diversity: Optional[DiversityScore] = None
 
     # Improvement suggestions
     improvements: List[ImprovementTip]
