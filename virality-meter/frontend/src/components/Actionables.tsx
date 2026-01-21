@@ -72,7 +72,7 @@ export default function Actionables({ postScore, accountScore, aggregateScore }:
     });
   }
 
-  if (stats.diversity_score < 0.5) {
+  if ((postScore.diversity?.diversity_score || 0) < 0.5) {
     actions.push({
       title: 'Increase Content Variety',
       description: 'Your content lacks diversity. Mix text with media, add emojis, include links, or mention relevant accounts.',
@@ -124,7 +124,7 @@ export default function Actionables({ postScore, accountScore, aggregateScore }:
   }
 
   const postsPerDay = accountScore.consistency_score < 0.5 ? 'low' :
-                      accountScore.consistency_score < 0.8 ? 'inconsistent' : 'good';
+    accountScore.consistency_score < 0.8 ? 'inconsistent' : 'good';
 
   if (accountScore.consistency_score < 0.7) {
     actions.push({
@@ -204,22 +204,20 @@ export default function Actionables({ postScore, accountScore, aggregateScore }:
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: idx * 0.05 }}
-                className={`border-l-2 pl-3 py-2 ${
-                  action.priority === 'critical' ? 'border-term-red bg-term-red/5' :
-                  action.priority === 'high' ? 'border-term-amber bg-term-amber/5' :
-                  action.priority === 'medium' ? 'border-term-cyan bg-term-cyan/5' :
-                  'border-term-gray bg-term-bg-light'
-                }`}
+                className={`border-l-2 pl-3 py-2 ${action.priority === 'critical' ? 'border-term-red bg-term-red/5' :
+                    action.priority === 'high' ? 'border-term-amber bg-term-amber/5' :
+                      action.priority === 'medium' ? 'border-term-cyan bg-term-cyan/5' :
+                        'border-term-gray bg-term-bg-light'
+                  }`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-[10px] px-1.5 py-0.5 font-mono uppercase font-bold ${
-                        action.priority === 'critical' ? 'bg-term-red text-white' :
-                        action.priority === 'high' ? 'bg-term-amber text-term-bg' :
-                        action.priority === 'medium' ? 'bg-term-cyan text-term-bg' :
-                        'bg-term-gray text-white'
-                      }`}>
+                      <span className={`text-[10px] px-1.5 py-0.5 font-mono uppercase font-bold ${action.priority === 'critical' ? 'bg-term-red text-white' :
+                          action.priority === 'high' ? 'bg-term-amber text-term-bg' :
+                            action.priority === 'medium' ? 'bg-term-cyan text-term-bg' :
+                              'bg-term-gray text-white'
+                        }`}>
                         {action.priority}
                       </span>
                       <span className="text-[10px] text-term-gray font-mono uppercase">
