@@ -227,15 +227,13 @@ export default function Home() {
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
                       placeholder="Enter content to analyze (threads, long-form, tweets, etc.)..."
-                      className={`terminal-input w-full h-32 resize-y text-sm ${
-                        isVeryLong ? 'border-term-amber' : ''
-                      }`}
+                      className={`terminal-input w-full h-32 resize-y text-sm ${isVeryLong ? 'border-term-amber' : ''
+                        }`}
                       disabled={loading}
                       title="No character limit - analyze any content length"
                     />
-                    <div className={`absolute bottom-2 right-2 text-xs font-mono ${
-                      isVeryLong ? 'text-term-amber' : charCount > warningThreshold ? 'text-term-cyan' : 'text-term-gray'
-                    }`}>
+                    <div className={`absolute bottom-2 right-2 text-xs font-mono ${isVeryLong ? 'text-term-amber' : charCount > warningThreshold ? 'text-term-cyan' : 'text-term-gray'
+                      }`}>
                       {charCount.toLocaleString()} chars
                       {isVeryLong && <span className="ml-1">⚠</span>}
                     </div>
@@ -259,11 +257,10 @@ export default function Home() {
                           type="button"
                           onClick={() => setContentType(type.value as typeof contentType)}
                           title={type.tooltip}
-                          className={`text-[10px] px-2 py-1 font-mono transition-colors ${
-                            contentType === type.value
+                          className={`text-[10px] px-2 py-1 font-mono transition-colors ${contentType === type.value
                               ? 'bg-term-cyan text-term-bg'
                               : 'bg-term-bg border border-term-border text-term-gray hover:border-term-cyan'
-                          }`}
+                            }`}
                         >
                           {type.label}
                         </button>
@@ -553,11 +550,10 @@ export default function Home() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                      className={`py-1.5 text-[10px] font-mono transition-all ${
-                        activeTab === tab.id
+                      className={`py-1.5 text-[10px] font-mono transition-all ${activeTab === tab.id
                           ? 'bg-term-green text-term-bg'
                           : 'bg-term-bg-light text-term-gray border border-term-border hover:border-term-green-dim'
-                      }`}
+                        }`}
                     >
                       {tab.label}
                     </button>
@@ -741,13 +737,13 @@ export default function Home() {
                         diversity_score
                       </span>
                       <span className="text-sm font-mono font-bold text-term-cyan">
-                        {(result.post_score.content_stats.diversity_score * 100).toFixed(0)}%
+                        {((result.post_score.diversity?.diversity_score || 0) * 100).toFixed(0)}%
                       </span>
                     </div>
                     <div className="mt-1 h-1 bg-term-bg-light rounded-full overflow-hidden">
                       <div
                         className="h-full bg-term-cyan transition-all duration-500"
-                        style={{ width: `${result.post_score.content_stats.diversity_score * 100}%` }}
+                        style={{ width: `${(result.post_score.diversity?.diversity_score || 0) * 100}%` }}
                       />
                     </div>
                   </div>
@@ -803,10 +799,9 @@ export default function Home() {
                         >
                           <span className="text-term-green">+</span>
                           <span className="text-term-gray">{signal.label}</span>
-                          <span className={`ml-auto ${
-                            signal.weight === 'HIGH' ? 'text-term-green' :
-                            signal.weight === 'MEDIUM' ? 'text-term-amber' : 'text-term-gray'
-                          }`}>
+                          <span className={`ml-auto ${signal.weight === 'HIGH' ? 'text-term-green' :
+                              signal.weight === 'MEDIUM' ? 'text-term-amber' : 'text-term-gray'
+                            }`}>
                             {signal.weight}
                           </span>
                         </div>
