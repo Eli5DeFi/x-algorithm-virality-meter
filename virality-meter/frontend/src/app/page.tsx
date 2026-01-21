@@ -5,6 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ViralityMeter from '@/components/ViralityMeter';
 import ScoreBreakdown from '@/components/ScoreBreakdown';
 import ImprovementTips from '@/components/ImprovementTips';
+import AlgorithmExplainer from '@/components/AlgorithmExplainer';
+import Actionables from '@/components/Actionables';
+import DisclaimerBanner from '@/components/DisclaimerBanner';
 import { analyzeCombined, CombinedAnalysisResponse } from '@/lib/api';
 import { VIRALITY_TIERS, ALGORITHM_SIGNALS } from '@/lib/tiers';
 
@@ -13,7 +16,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analyzedContent, setAnalyzedContent] = useState('');
-  const [activeTab, setActiveTab] = useState<'breakdown' | 'tips'>('breakdown');
+  const [activeTab, setActiveTab] = useState<'breakdown' | 'tips' | 'actionables' | 'algorithm'>('breakdown');
 
   // Form state - Content
   const [content, setContent] = useState('');
@@ -176,6 +179,9 @@ export default function Home() {
           </div>
         </div>
       </header>
+
+      {/* Disclaimer Banner */}
+      <DisclaimerBanner />
 
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* Tier Legend */}
@@ -537,15 +543,17 @@ export default function Home() {
             {/* Mobile Tabs */}
             {result && (
               <div className="lg:hidden">
-                <div className="flex gap-1.5 mb-3">
+                <div className="grid grid-cols-2 gap-1.5 mb-3">
                   {[
+                    { id: 'actionables', label: 'ACTIONS' },
                     { id: 'breakdown', label: 'BREAKDOWN' },
                     { id: 'tips', label: 'TIPS' },
+                    { id: 'algorithm', label: 'ALGORITHM' },
                   ].map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                      className={`flex-1 py-1.5 text-[10px] font-mono transition-all ${
+                      className={`py-1.5 text-[10px] font-mono transition-all ${
                         activeTab === tab.id
                           ? 'bg-term-green text-term-bg'
                           : 'bg-term-bg-light text-term-gray border border-term-border hover:border-term-green-dim'
@@ -557,6 +565,15 @@ export default function Home() {
                 </div>
 
                 <AnimatePresence mode="wait">
+                  {activeTab === 'actionables' && (
+                    <motion.div key="actionables" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      <Actionables
+                        postScore={result.post_score}
+                        accountScore={result.account_score}
+                        aggregateScore={result.aggregate_score}
+                      />
+                    </motion.div>
+                  )}
                   {activeTab === 'breakdown' && (
                     <motion.div key="breakdown" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                       <ScoreBreakdown
@@ -571,6 +588,11 @@ export default function Home() {
                   {activeTab === 'tips' && (
                     <motion.div key="tips" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                       <ImprovementTips tips={result.post_score.improvements} />
+                    </motion.div>
+                  )}
+                  {activeTab === 'algorithm' && (
+                    <motion.div key="algorithm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      <AlgorithmExplainer />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -829,6 +851,11 @@ export default function Home() {
             {/* Desktop: Full breakdown */}
             {result && (
               <div className="hidden lg:block space-y-4">
+                <Actionables
+                  postScore={result.post_score}
+                  accountScore={result.account_score}
+                  aggregateScore={result.aggregate_score}
+                />
                 <ScoreBreakdown
                   signalScores={result.post_score.signal_scores}
                   engagementPotential={result.post_score.engagement_potential}
@@ -837,6 +864,7 @@ export default function Home() {
                   negativeRisk={result.post_score.negative_signal_risk}
                 />
                 <ImprovementTips tips={result.post_score.improvements} />
+                <AlgorithmExplainer />
               </div>
             )}
           </div>
