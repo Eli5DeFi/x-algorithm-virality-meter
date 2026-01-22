@@ -863,14 +863,14 @@ export default function Home() {
         {/* Footer */}
         <footer className="mt-12 pt-6 border-t border-term-border text-center">
           <p className="text-term-gray text-xs font-mono">
-            X Algorithm Analysis powered by{' '}
+            Built by{' '}
             <a
-              href="https://github.com/AbdelStark/x-algorithm"
+              href="https://x.com/Eli5defi"
               target="_blank"
               rel="noopener noreferrer"
               className="text-term-green hover:underline"
             >
-              AbdelStark/x-algorithm
+              Eli5DeFi
             </a>
           </p>
         </footer>
